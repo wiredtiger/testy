@@ -1,0 +1,3 @@
+[environment]
+testy_dir: /opt/testy
+workload_dir: %(testy_dir)s/workloads
