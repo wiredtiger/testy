@@ -24,9 +24,9 @@ def populate(c, workload=None):
     status = c.sudo(command,  user="testy", warn=True)
 
     if status.return_code == 0:
-        print("populate succeeded for workload '" + workload + "'")
+        print(f"populate succeeded for workload '{workload}'")
     else:
-        print("populate failed for workload '" + workload + "'")
+        print(f"populate failed for workload '{workload}'")
 
 
 # ---------------------------------------------------------------------------------------
@@ -41,9 +41,9 @@ def get_config_value(section, key):
     config.read(testy_config)
 
     if section not in config.sections():
-        raise Exit("No section '" + section + "' in file '" + testy_config + "'.")
+        raise Exit(f"No '{section}' section in file '{testy_config}'.")
     if not config.has_option(section, key):
-        raise Exit("No option '" + option + "' in section '" + section + "'.")
+        raise Exit(f"No '{key}' option in section '{section}'.")
 
     return config.get(section, key)
 
@@ -55,7 +55,7 @@ def get_config_env(section):
     config.read(testy_config)
 
     if section not in config.sections():
-        raise Exit("No section '" + section + "' in file '" + testy_config + "'.")
+        raise Exit(f"No '{section}' section in file '{testy_config}'.")
 
     env = ""
     for k, v in config.items(section):
