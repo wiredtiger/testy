@@ -9,7 +9,7 @@ testy_config = ".testy"
 
 
 # ---------------------------------------------------------------------------------------
-# fabfile tasks
+# Tasks
 # ---------------------------------------------------------------------------------------
 
 # Run the populate function as defined in the workload interface file "workload.sh".
@@ -30,7 +30,7 @@ def populate(c, workload=None):
 
 
 # ---------------------------------------------------------------------------------------
-# helper functions
+# Helper functions
 # ---------------------------------------------------------------------------------------
 
 # Return the value corresponding to the specified key from the specified section
