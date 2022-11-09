@@ -14,10 +14,7 @@ testy_config = ".testy"
 
 # Run the populate function as defined in the workload interface file "workload.sh".
 @task
-def populate(c, workload=None):
-
-    if not workload:
-        raise Exit("Please specify a workload argument.")
+def populate(c, workload):
 
     wif = get_config_value("environment", "workload_dir") + "/" + workload + ".sh"
     command = get_config_env("environment") + " bash " + wif + " populate"
