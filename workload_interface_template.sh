@@ -1,6 +1,6 @@
 #! /bin/bash
-
 # A template for defining testy workloads. 
+
 describe() {
 }
 
@@ -12,3 +12,5 @@ run() {
 
 validate() {
 }
+
+"$@"

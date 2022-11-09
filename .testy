@@ -1,0 +1,3 @@
+[environment]
+testy_dir: /srv/testy
+workload_dir: %(testy_dir)s/workloads
