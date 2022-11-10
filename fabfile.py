@@ -1,8 +1,9 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import configparser
+import configparser as cp
 from fabric import task
+from pathlib import Path
 from invoke.exceptions import Exit
 
 testy_config = ".testy"
@@ -16,60 +17,62 @@ testy_config = ".testy"
 @task
 def install(c, branch="develop"):
 
-    # Create testy user.
-    user = get_config_value("testy", "user")
+    # Create application user.
+    user = get_value("application", "user")
     create_user(c, user)
 
     # Create framework directories.
-    testy_dir = get_config_value("environment", "testy_dir")
-    backup_dir = get_config_value("environment", "backup_dir")
-    database_dir = get_config_value("environment", "database_dir")
-    create_directory(c, testy_dir)
-    create_directory(c, backup_dir)
-    create_directory(c, database_dir)
+    testy_dir = get_value("application", "testy_dir")
+    backup_dir = get_value("application", "backup_dir")
+    database_dir = get_value("application", "database_dir")
+
+    for dir in [testy_dir, backup_dir, database_dir]:
+        create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
 
     # Install prerequisite software.
     install_packages(c)
 
     # Clone repositories.
-    git_clone(c, get_config_value("testy", "git_remote_url"),
-              get_config_value("testy", "git_checkout_dir"))
+    for repo in ["testy", "wiredtiger"]:
+       git_clone(c, get_value(repo, "git_url"), get_value(repo, "home_dir"))
 
-    git_clone(c, get_config_value("wiredtiger", "git_remote_url"),
-              get_config_value("wiredtiger", "git_checkout_dir"))
+    # Create symbolic links.
+    create_symlinks(c)
 
     # Build WiredTiger.
     build_wiredtiger(c, branch)
 
     # Install services.
+    # TODO: Update this part of the installation when the service implementation
+    #       is complete, and add properties in .testy for the service filenames.
     install_service(c, "backup")
+    install_service(c, "crash_test")
 
     # Print installation summary on success.
-    wt_home_dir = get_config_value("environment", "wt_home_dir")
-    wt_build_dir = get_config_value("environment", "wt_build_dir")
-    workload_dir = get_config_value("environment", "workload_dir")
-
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print("The testy installation is complete!")
     print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
     print(f"The testy framework user is '{user}'")
     print(f"The testy framework directory is '{testy_dir}'")
-    print(f"The testy workloads are found in '{workload_dir}'")
+    print(f"The testy workloads are found in '" +
+          get_value("application", "workload_dir") + "'")
     print(f"The database directory is '{database_dir}'")
     print(f"The database backup directory is '{backup_dir}'")
-    print(f"The WiredTiger home directory is '{wt_home_dir}'")
-    print(f"The WiredTiger build directory is '{wt_build_dir}'")
+    print(f"The WiredTiger home directory is '" +
+          get_value("wiredtiger", "home_dir") + "'")
+    print(f"The WiredTiger build directory is '" +
+          get_value("wiredtiger", "build_dir") + "'")
 
 # Run the populate function as defined in the workload interface file "workload.sh".
 @task
 def populate(c, workload):
 
-    wif = get_config_value("environment", "workload_dir") + "/" + workload + ".sh"
-    command = get_config_env("environment") + " bash " + wif + " populate"
-    status = c.sudo(command,  user="testy", warn=True)
+    wif = get_value("application", "workload_dir") + "/" + workload + ".sh"
+    command = get_env("application") + " bash " + wif + " populate"
+    user = get_value("application", "user")
 
-    if status.return_code == 0:
+    if c.sudo(command,  user="testy", warn=True):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
@@ -81,9 +84,9 @@ def populate(c, workload):
 
 # Return the value corresponding to the specified key from the specified section
 # of the testy configuration file.
-def get_config_value(section, key):
+def get_value(section, key):
 
-    parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
     parser.read(testy_config)
 
     if section not in parser.sections():
@@ -93,11 +96,11 @@ def get_config_value(section, key):
 
     return parser.get(section, key)
 
-# Return the key/value pairs in the environment section of the testy configuration file
-# as a single string of shell environment values.    
-def get_config_env(section):
+# Return the key/value pairs in the application section of the testy configuration file
+# as a single string of shell application values.
+def get_env(section):
 
-    parser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
+    parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
     parser.read(testy_config)
 
     if section not in parser.sections():
@@ -120,9 +123,9 @@ def create_user(c, username):
 
     # Grant sudo privileges.
     if c.run("getent group sudo", warn=True, hide=True):
-        c.sudo(f"usermod -aG sudo {username}", warn=True)
+        c.sudo(f"usermod -aG sudo,adm {username}", warn=True)
     elif c.run("getent group wheel", warn=True, hide=True):
-        c.sudo(f"usermod -aG wheel {username}", warn=True)
+        c.sudo(f"usermod -aG wheel,adm {username}", warn=True)
     c.sudo(f"echo '{username} ALL=(ALL:ALL) NOPASSWD:ALL' | " \
            f"sudo tee /etc/sudoers.d/{username}-user >/dev/null", user="root")
 
@@ -132,42 +135,55 @@ def create_user(c, username):
 # Create framework directories.
 def create_directory(c, dir):
 
+    print(f"Creating directory '{dir}' ... ", end='', flush=True)
     if c.sudo(f"test -d {dir}", warn=True):
-        print(f"Directory '{dir}' exists.")
+        print(f"directory exists")
     else:
-        print(f"Creating directory '{dir}' ...")
         if c.sudo(f"mkdir -p {dir}", warn=True).failed:
-            raise Exit(f"Error: Unable to create directory '{dir}'")
+            raise Exit(f"\nError: Unable to create directory '{dir}'")
+        print("done!")
 
 # Clone git repository.
 def git_clone(c, git_url, local_dir):
 
+    repo = Path(git_url).stem
     if c.run(f"test -d {local_dir}", warn=True):
         print(f"Directory '{local_dir}' exists. " \
-              f"Repository '{git_url}' will not be cloned.")
+              f"Repository '{repo}' will not be cloned.")
     else:
-        print("Cloning repository ...")
+        print(f"Cloning '{repo}' repository ... ", end='', flush=True)
         c.run(f"git clone {git_url} {local_dir}", hide=True)
+        print("done!")
+
+# Create framework symlinks.
+def create_symlinks(c):
+
+    if not c.run("test -h " + get_value("application", "workload_dir"), warn=True):
+        with c.cd(get_value("application", "testy_dir")):
+            c.run("ln -s " + get_value("testy", "workload_dir"))
 
 # Build WiredTiger for the specified branch.
 def build_wiredtiger(c, branch):
 
-    wt_home_dir = get_config_value("environment", "wt_home_dir")
-    wt_build_dir = get_config_value("environment", "wt_build_dir")
+    wt_home_dir = get_value("wiredtiger", "home_dir")
+    wt_build_dir = get_value("wiredtiger", "build_dir")
 
     with c.cd(wt_home_dir):
-        print(f"Checking out git branch '{branch}' ...")
-        c.run(f"git pull && git checkout {branch}")
+        print(f"Checking out git branch '{branch}' ... ", end='', flush=True)
+        c.run(f"git checkout {branch}")
+        c.run("git pull", hide=True)
         c.run("rm -rf build && mkdir build")
 
     with c.cd(wt_build_dir):
-        #ninja_build = c.run("which ninja", warn=True, hide=True)
-        print("Configuring WiredTiger ...")
-        c.run("cmake ../.")
-        print("Building WiredTiger ...")
-        c.run("make")
-        
-    print("... done!")
+        ninja_build = c.run("which ninja", warn=True, hide=True)
+
+        print("Configuring WiredTiger")
+        c.run("cmake ../. -G Ninja") if ninja_build else c.run("cmake ../.")
+        print("-- Configuration complete!")
+
+        print("Building WiredTiger")
+        c.run("ninja") if ninja_build else c.run("make")
+        print("-- Build complete!")
 
 # Install prerequisite software.
 def install_packages(c):
@@ -184,31 +200,40 @@ def install_packages(c):
     is_rpm = (installer != "apt")
     packages = ["cmake", "cmake-curses-gui", "ccache", "ninja-build",
                 "python3-dev", "swig", "libarchive"]
-    print("Installing required software packages ...")
+    print("Installing required software packages")
 
     if is_rpm:
         for package in packages:
             if c.run(f"rpm -qa | grep {package}", warn=True, hide=True):
                 if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                    print(f" . Package '{package}' is already installed.")
+                    print(f"-- Package '{package}' is already installed.")
                 else:
                     c.sudo(f"{installer} -y install {package}", hide=True)
-                    print(f" . Installed package '{package}'.")
+                    print(f"-- Installed package '{package}'.")
     else:
         for package in packages:
             if c.run(f"dpkg-query -l | grep {package}", warn=True, hide=True):
                 if c.run(f"dpkg -s {package}", warn=True, hide=True):
-                    print(f" . Package '{package}' is already installed.")
+                    print(f"-- Package '{package}' is already installed.")
                 else:
                     c.sudo(f"{installer} -y install {package}", hide=True)
-                    print(f" . Installed package '{package}'.")
+                    print(f"-- Installed package '{package}'.")
 
     # Attempt to pip install ninja if it was not available through the package manager.
     if not c.run("which ninja", warn=True, hide=True):
         if c.sudo(f"python3 -m pip install ninja", warn=True, hide=True):
-            print(f" . Installed package 'ninja'.")
+            print(f"-- Installed package 'ninja'.")
+
+    print("-- Package installation complete!")
 
 # Install services.
 def install_service(c, service):
 
-    print(f"Installing service '{service}' ...")
+    print(f"Installing service '{service}' ... ", end='', flush=True)
+    file = get_value("testy", "service_dir")
+    if not c.run(f"test -f {file}", warn=True):
+        print("failed")
+        print(f"-- Unable to install service: File not found.")
+    else:
+        c.sudo(f"cp {file} /etc/systemd/system && systemctl daemon-reload")
+        print("done!")

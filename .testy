@@ -1,16 +1,17 @@
-[environment]
-testy_dir    = /srv/testy
-backup_dir   = ${testy_dir}/backup
-database_dir = ${testy_dir}/data
-workload_dir = ${testy_dir}/framework/workloads
-wt_home_dir  = ${testy_dir}/wiredtiger
-wt_build_dir = ${wt_home_dir}/build
+[application]
+user          = testy
+testy_dir     = /srv/testy
+backup_dir    = ${testy_dir}/backup
+database_dir  = ${testy_dir}/data
+workload_dir  = ${testy_dir}/workloads
 
 [testy]
-user= testy
-git_checkout_dir = ${environment:testy_dir}/framework
-git_remote_url   = git@github.com:wiredtiger/testy.git
+home_dir     = ${application:testy_dir}/framework
+service_dir  = ${home_dir}/services
+workload_dir = ${home_dir}/workloads
+git_url      = git@github.com:wiredtiger/testy.git
 
 [wiredtiger]
-git_checkout_dir = ${environment:wt_home_dir}
-git_remote_url   = git@github.com:wiredtiger/wiredtiger.git
+home_dir  = ${application:testy_dir}/wiredtiger
+build_dir = ${home_dir}/build
+git_url   = git@github.com:wiredtiger/wiredtiger.git
