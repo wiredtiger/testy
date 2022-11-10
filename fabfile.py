@@ -97,7 +97,7 @@ def get_value(section, key):
     return parser.get(section, key)
 
 # Return the key/value pairs in the application section of the testy configuration file
-# as a single string of shell application values.
+# as a single string of shell environment values.
 def get_env(section):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
