@@ -182,7 +182,10 @@ def build_wiredtiger(c, branch):
         print("-- Configuration complete!")
 
         print("Building WiredTiger")
-        c.run("ninja") if ninja_build else c.run("make")
+        if ninja_build:
+            c.run("ninja -j $(grep -c ^processor /proc/cpuinfo)")
+        else:
+             c.run("make -j $(grep -c ^processor /proc/cpuinfo)")
         print("-- Build complete!")
 
 # Install prerequisite software.
