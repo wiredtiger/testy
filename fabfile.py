@@ -70,9 +70,8 @@ def populate(c, workload):
 
     wif = get_value("application", "workload_dir") + "/" + workload + ".sh"
     command = get_env("application") + " bash " + wif + " populate"
-    user = get_value("application", "user")
 
-    if c.sudo(command,  user="testy", warn=True):
+    if c.sudo(command, user=get_value("application", "user"), warn=True):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
