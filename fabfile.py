@@ -205,20 +205,16 @@ def install_packages(c):
 
     if is_rpm:
         for package in packages:
-            if c.run(f"rpm -qa | grep {package}", warn=True, hide=True):
-                if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                    print(f"-- Package '{package}' is already installed.")
-                else:
-                    c.sudo(f"{installer} -y install {package}", hide=True)
-                    print(f"-- Installed package '{package}'.")
+            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
+                print(f"-- Package '{package}' is already installed.")
+            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f"-- Installed package '{package}'.")
     else:
         for package in packages:
-            if c.run(f"dpkg-query -l {package}", warn=True, hide=True):
-                if c.run(f"dpkg -s {package}", warn=True, hide=True):
-                    print(f"-- Package '{package}' is already installed.")
-                else:
-                    c.sudo(f"{installer} -y install {package}", hide=True)
-                    print(f"-- Installed package '{package}'.")
+            if c.run(f"dpkg -s {package}", warn=True, hide=True):
+                print(f"-- Package '{package}' is already installed.")
+            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f"-- Installed package '{package}'.")
 
     # Attempt to pip install ninja if it was not available through the package manager.
     if not c.run("which ninja", warn=True, hide=True):
