@@ -1,3 +1,23 @@
+[application]
+user          = testy
+testy_dir     = /srv/testy
+backup_dir    = ${testy_dir}/backup
+database_dir  = ${testy_dir}/data
+workload_dir  = ${testy_dir}/workloads
+
+[testy]
+home_dir     = ${application:testy_dir}/framework
+service_dir  = ${home_dir}/services
+workload_dir = ${home_dir}/workloads
+git_url      = git@github.com:wiredtiger/testy.git
+
+[wiredtiger]
+home_dir  = ${application:testy_dir}/wiredtiger
+build_dir = ${home_dir}/build
+git_url   = git@github.com:wiredtiger/wiredtiger.git
+
 [environment]
-testy_dir: /srv/testy
-workload_dir: %(testy_dir)s/workloads
+backup_dir   = ${application:backup_dir}
+database_dir = ${application:database_dir}
+workload_dir = ${application:workload_dir}
+wt_build_dir = ${wiredtiger:build_dir}
