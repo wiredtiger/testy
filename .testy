@@ -15,3 +15,9 @@ git_url      = git@github.com:wiredtiger/testy.git
 home_dir  = ${application:testy_dir}/wiredtiger
 build_dir = ${home_dir}/build
 git_url   = git@github.com:wiredtiger/wiredtiger.git
+
+[environment]
+backup_dir   = ${application:backup_dir}
+database_dir = ${application:database_dir}
+workload_dir = ${application:workload_dir}
+wt_build_dir = ${wiredtiger:build_dir}
