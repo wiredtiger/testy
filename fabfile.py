@@ -200,8 +200,7 @@ def install_packages(c):
         raise Exit("Error: Unable to determine package installer.")
 
     is_rpm = (installer != "apt")
-    packages = ["cmake", "cmake-curses-gui", "ccache", "ninja-build",
-                "python3-dev", "swig", "libarchive"]
+    packages = ["cmake", "ccache", "ninja-build", "python3-dev", "swig", "libarchive"]
     print("Installing required software packages")
 
     if is_rpm:
@@ -214,7 +213,7 @@ def install_packages(c):
                     print(f"-- Installed package '{package}'.")
     else:
         for package in packages:
-            if c.run(f"dpkg-query -l | grep {package}", warn=True, hide=True):
+            if c.run(f"dpkg-query -l {package}", warn=True, hide=True):
                 if c.run(f"dpkg -s {package}", warn=True, hide=True):
                     print(f"-- Package '{package}' is already installed.")
                 else:
