@@ -76,6 +76,19 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
+# Workload function that takes 3 optional argument describe, list and upload. 
+@task
+def workload(c, describe=None, list=False, upload=None):
+
+    # Describes the workload specified.
+    if describe != None:
+        wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
+        command = wif + " describe"
+        if c.sudo(command, user=get_value("application", "user"), warn=True):
+            return
+        else:
+            print(f"Unable to describe '{describe}' workload")
+            return
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
