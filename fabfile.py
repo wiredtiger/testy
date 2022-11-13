@@ -76,7 +76,8 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
-# Workload function that takes 3 optional argument describe, list and upload. 
+# Workload function that takes 3 optional argument describe, list and upload. Only one optional 
+# argument can be taken at a time. If no optional arguments are taken, the function will do nothing.  
 @task
 def workload(c, describe=None, list=False, upload=None):
 
@@ -88,7 +89,7 @@ def workload(c, describe=None, list=False, upload=None):
             return
         else:
             print(f"Unable to describe '{describe}' workload")
-            return
+        return
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
