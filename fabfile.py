@@ -64,7 +64,7 @@ def install(c, branch="develop"):
     print(f"The WiredTiger build directory is '" +
           get_value("wiredtiger", "build_dir") + "'")
 
-# Run the populate function as defined in the workload interface file "workload.sh".
+# Run the populate function as defined in the workload interface file.
 @task
 def populate(c, workload):
 
@@ -76,7 +76,7 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
-# Workload function that takes 3 optional argument upload, list, describe. If no arguments are 
+# The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
 # provided, the current workload is returned.
 @task
 def workload(c, upload=None, list=False, describe=None):
@@ -99,8 +99,8 @@ def workload(c, upload=None, list=False, describe=None):
     if list:
         print("Listing to be implemented")
 
-    # Describes the workload specified by running the describe function as defined in the workload
-    # interface file "workload.sh". 
+    # Describes the specified workload by running the describe function as defined in the workload
+    # interface file.
     if describe:
         wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
         command = wif + " describe"
