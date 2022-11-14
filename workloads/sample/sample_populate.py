@@ -74,4 +74,6 @@ while True:
     if get_dir_size("WT_TEST", pop_workload.options.report_file) > target_size:
         break
 
+# Finish with a checkpoint to make all data durable.
+checkpoint(connection, context)
 print(' DONE')

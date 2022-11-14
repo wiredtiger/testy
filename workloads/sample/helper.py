@@ -30,6 +30,21 @@
 import os
 from workgen import *
 
+def checkpoint(connection, context):
+    """Creates a checkpoint
+
+    Args:
+        connection (Connection): WiredTiger connection
+        context (Context): Workgen context
+
+    Returns:
+        Nothing
+    """
+    checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
+    thread = Thread(checkpoint_op)
+    checkpoint_workload = Workload(context, thread)
+    checkpoint_workload.run(connection)
+
 
 def create_session(connection, session_config = ''):
     """Creates a session
