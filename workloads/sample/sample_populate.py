@@ -27,23 +27,33 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+import os
 import random
-from helper import *
+from workgen import *
+
+def get_dir_size(dir, ignored_files = []):
+    with os.scandir(dir) as entries:
+        total_size = 0
+        for entry in entries:
+            if entry.is_file() and entry.name not in ignored_files:
+                total_size += entry.stat().st_size
+        return total_size
 
 # Setup
 connection_config = 'create'
-context, connection = setup(connection_config)
+context = Context()
+connection = context.wiredtiger_open(connection_config)
 
 # Populate: Create tables.
 num_tables = 1000
 tables = []
 table_config = 'key_format=S,value_format=S'
-session = create_session(connection, '')
+session = connection.open_session()
 
 for i in range(num_tables):
     table_name = "table:test" + str(i)
-    table = create_table(session, table_name, table_config)
-    tables.append(table)
+    session.create(table_name, table_config)
+    tables.append(Table(table_name))
 
 print("Tables created:", num_tables)
 
@@ -75,5 +85,8 @@ while True:
         break
 
 # Finish with a checkpoint to make all data durable.
-checkpoint(connection, context)
+checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
+thread = Thread(checkpoint_op)
+checkpoint_workload = Workload(context, thread)
+checkpoint_workload.run(connection)
 print(' DONE')
