@@ -10,6 +10,8 @@ home_dir     = ${application:testy_dir}/framework
 service_dir  = ${home_dir}/services
 workload_dir = ${home_dir}/workloads
 git_url      = git@github.com:wiredtiger/testy.git
+cur_workload = 
+
 
 [wiredtiger]
 home_dir  = ${application:testy_dir}/wiredtiger

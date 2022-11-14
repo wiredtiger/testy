@@ -76,36 +76,46 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
-# Workload function that takes 3 optional argument upload, list, describe. 
+# Workload function that takes 3 optional argument upload, list, describe. If no arguments are 
+# provided, the current workload is returned.
 @task
 def workload(c, upload=None, list=False, describe=None):
     """ Upload, list, and describe workloads. 
-    One to three optional arguments can be taken at a time. If more than one option is specified at
+    Up three optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
        2. list
        3. describe
-    If an option fails at any point, it will exit and other following options will not be executed.
-    Workload must be specified for describe and upload options.  
+    If an option fails at any point, it will print an error message, exit the current option and 
+    continue running the following options.  
+    A workload must be specified for the describe and upload options.  
     """
     
+    cur_workload = get_value("testy", "cur_workload")
+
     # TODO: Implement list and upload functionality.
-    if upload != None:
+    if upload:
         print("Upload to be implemented") 
     if list:
         print("Listing to be implemented")
-        
-    # Describes the workload specified. Returns on failure, otherwise continue.
-    if describe != None:
+
+    # Describes the workload specified by running the describe function as defined in the workload
+    # interface file "workload.sh". 
+    if describe:
         wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
         command = wif + " describe"
-        if not c.sudo(command, user=get_value("application", "user"), warn=True):
+        result = c.sudo(command, user=get_value("application", "user"), warn=True)
+        if not result: 
             print(f"Unable to describe '{describe}' workload")
-            return
+        elif result.stdout == "":
+            print(f"No description provided for workload '{describe}'.")
     
-    # If no option has been specified, warn the user and return as usual. 
-    if describe == None and upload == None and not list:
-        print("Please specify optional arguments: --upload, --list or --describe.")
+    # If no option has been specified, print the current workload and return as usual.  
+    if not describe and not upload and not list:
+        if cur_workload:
+            print(f"Current workload:\033[1m {cur_workload}\033[0m ")
+        else: 
+            print("The current workload is unspecified")
     return 
 
 # ---------------------------------------------------------------------------------------
