@@ -29,7 +29,23 @@
 
 import os
 import random
+import threading as pythread
 from workgen import *
+
+def create_table(connection, start, end, table_config):
+    global tables
+    tmp_tables = []
+
+    session = connection.open_session()
+    for i in range(start, end):
+        table_name = "table:test" + str(i)
+        session.create(table_name, table_config)
+        tmp_tables.append(Table(table_name))
+
+    lock = pythread.Lock()
+    with lock:
+        tables = tables + tmp_tables
+
 
 def get_dir_size(dir, ignored_files = []):
     with os.scandir(dir) as entries:
@@ -38,6 +54,7 @@ def get_dir_size(dir, ignored_files = []):
             if entry.is_file() and entry.name not in ignored_files:
                 total_size += entry.stat().st_size
         return total_size
+
 
 # Setup
 connection_config = 'create'
@@ -50,12 +67,34 @@ tables = []
 table_config = 'key_format=S,value_format=S'
 session = connection.open_session()
 
-for i in range(num_tables):
-    table_name = "table:test" + str(i)
-    session.create(table_name, table_config)
-    tables.append(Table(table_name))
+# Let's do multi threading
+num_threads = 10
+threads = list()
+if num_threads > num_tables:
+    num_threads = num_tables
+table_per_thread = num_tables // num_threads
+remainder = num_tables % num_threads
+
+for i in range(0, table_per_thread * num_threads, table_per_thread):
+    start = i
+    end = i + table_per_thread
+    x = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
+    threads.append(x)
+    x.start()
+
+
+if remainder > 0:
+    start = table_per_thread * num_threads
+    end = num_tables
+    x = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
+    threads.append(x)
+    x.start()
+
+for x in threads:
+    x.join()
 
 print("Tables created:", num_tables)
+assert len(tables) == num_tables
 
 # Populate: Insert random key/value pairs in all tables until reaching a size limit.
 kb = 1024
