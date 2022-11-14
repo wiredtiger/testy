@@ -68,7 +68,7 @@ def install(c, branch="develop"):
 @task
 def populate(c, workload):
 
-    wif = get_value("application", "workload_dir") + "/" + workload + ".sh"
+    wif = get_value("application", "workload_dir") + "/" + workload + "/" + workload + ".sh"
     command = get_env("environment") + " bash " + wif + " populate"
 
     if c.sudo(command, user=get_value("application", "user"), warn=True):
