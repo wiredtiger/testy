@@ -81,7 +81,7 @@ def populate(c, workload):
 def workload(c, upload=None, list=False, describe=None):
     """ Upload, list, and describe workloads. 
     One to three optional arguments can be taken at a time. If more than one option is specified at
-    once, they will be executed in the following order (regardless of order they are called in): - 
+    once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
        2. list
        3. describe
@@ -94,7 +94,7 @@ def workload(c, upload=None, list=False, describe=None):
         print("Upload to be implemented") 
     if list:
         print("Listing to be implemented")
-
+        
     # Describes the workload specified. Returns on failure, otherwise continue.
     if describe != None:
         wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
@@ -103,10 +103,11 @@ def workload(c, upload=None, list=False, describe=None):
             print(f"Unable to describe '{describe}' workload")
             return
     
-    # If no option has been specified, warn the user and return. 
+    # If no option has been specified, warn the user and return as usual. 
     if describe == None and upload == None and not list:
         print("Please specify optional arguments: --upload, --list or --describe.")
     return 
+
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
