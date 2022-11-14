@@ -27,7 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-from runner import *
+import os
 from workgen import *
 
 
