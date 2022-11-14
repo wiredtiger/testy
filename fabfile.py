@@ -64,7 +64,7 @@ def install(c, branch="develop"):
     print(f"The WiredTiger build directory is '" +
           get_value("wiredtiger", "build_dir") + "'")
 
-# Run the populate function as defined in the workload interface file "workload.sh".
+# Run the populate function as defined in the workload interface file.
 @task
 def populate(c, workload):
 
@@ -76,6 +76,46 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
+# The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
+# provided, the current workload is returned.
+@task
+def workload(c, upload=None, list=False, describe=None):
+    """ Upload, list, and describe workloads. 
+    Up three optional arguments can be taken at a time. If more than one option is specified at
+    once, they will be executed in the following order (regardless of order they are called): - 
+       1. upload
+       2. list
+       3. describe
+    If an option fails at any point, it will print an error message, exit the current option and 
+    continue running the following options.  
+    """
+    
+    current_workload = get_value("testy", "cur_workload")
+
+    # TODO: Implement upload functionality.
+    if upload:
+        print("Upload to be implemented") 
+    if list:
+        print("Listing to be implemented")
+
+    # Describes the specified workload by running the describe function as defined in the workload
+    # interface file. A workload must be specified for the describe option. 
+    if describe:
+        wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
+        command = wif + " describe"
+        result = c.sudo(command, user=get_value("application", "user"), warn=True)
+        if not result: 
+            print(f"Unable to describe '{describe}' workload")
+        elif result.stdout == "":
+            print(f"No description provided for workload '{describe}'")
+    
+    # If no option has been specified, print the current workload and return as usual.  
+    if not describe and not upload and not list:
+        if current_workload:
+            print(f"The current workload is {current_workload}")
+        else: 
+            print("The current workload is unspecified")
+    return  
 
 # ---------------------------------------------------------------------------------------
 # Helper functions

@@ -1,9 +1,10 @@
 [application]
-user          = testy
-testy_dir     = /srv/testy
-backup_dir    = ${testy_dir}/backup
-database_dir  = ${testy_dir}/data
-workload_dir  = ${testy_dir}/workloads
+user             = testy
+testy_dir        = /srv/testy
+backup_dir       = ${testy_dir}/backup
+database_dir     = ${testy_dir}/data
+workload_dir     = ${testy_dir}/workloads
+current_workload =
 
 [testy]
 home_dir     = ${application:testy_dir}/framework
