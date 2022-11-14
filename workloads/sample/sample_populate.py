@@ -32,7 +32,9 @@ import random
 import threading as pythread
 from workgen import *
 
+
 def create_table(connection, start, end, table_config):
+    """Creates a table"""
     global tables
     tmp_tables = []
 
@@ -48,6 +50,7 @@ def create_table(connection, start, end, table_config):
 
 
 def get_dir_size(dir, ignored_files = []):
+    """Gets the size in bytes of a directory"""
     with os.scandir(dir) as entries:
         total_size = 0
         for entry in entries:
@@ -61,13 +64,11 @@ connection_config = 'create'
 context = Context()
 connection = context.wiredtiger_open(connection_config)
 
-# Populate: Create tables.
+# Create tables.
 num_tables = 1000
 tables = []
 table_config = 'key_format=S,value_format=S'
-session = connection.open_session()
 
-# Let's do multi threading
 num_threads = 10
 threads = list()
 if num_threads > num_tables:
@@ -75,6 +76,7 @@ if num_threads > num_tables:
 table_per_thread = num_tables // num_threads
 remainder = num_tables % num_threads
 
+# Split the work among the threads.
 for i in range(0, table_per_thread * num_threads, table_per_thread):
     start = i
     end = i + table_per_thread
@@ -82,7 +84,7 @@ for i in range(0, table_per_thread * num_threads, table_per_thread):
     threads.append(x)
     x.start()
 
-
+# Use an extra thread to do the remaining work.
 if remainder > 0:
     start = table_per_thread * num_threads
     end = num_tables
@@ -96,7 +98,7 @@ for x in threads:
 print("Tables created:", num_tables)
 assert len(tables) == num_tables
 
-# Populate: Insert random key/value pairs in all tables until reaching a size limit.
+# Insert random key/value pairs in all tables until reaching a size limit.
 kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
