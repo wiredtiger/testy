@@ -1,5 +1,5 @@
 #! /bin/bash
-# A template for defining testy workloads. 
+# Initial sample workload for use with the Testy framework.
 
 describe() {
     :
