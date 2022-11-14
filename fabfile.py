@@ -88,19 +88,18 @@ def workload(c, upload=None, list=False, describe=None):
        3. describe
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
-    A workload must be specified for the describe and upload options.  
     """
     
-    cur_workload = get_value("testy", "cur_workload")
+    current_workload = get_value("testy", "cur_workload")
 
-    # TODO: Implement list and upload functionality.
+    # TODO: Implement upload functionality.
     if upload:
         print("Upload to be implemented") 
     if list:
         print("Listing to be implemented")
 
     # Describes the specified workload by running the describe function as defined in the workload
-    # interface file.
+    # interface file. A workload must be specified for the describe option. 
     if describe:
         wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
         command = wif + " describe"
@@ -108,15 +107,15 @@ def workload(c, upload=None, list=False, describe=None):
         if not result: 
             print(f"Unable to describe '{describe}' workload")
         elif result.stdout == "":
-            print(f"No description provided for workload '{describe}'.")
+            print(f"No description provided for workload '{describe}'")
     
     # If no option has been specified, print the current workload and return as usual.  
     if not describe and not upload and not list:
-        if cur_workload:
-            print(f"Current workload:\033[1m {cur_workload}\033[0m ")
+        if current_workload:
+            print(f"The current workload is {current_workload}")
         else: 
             print("The current workload is unspecified")
-    return 
+    return  
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
