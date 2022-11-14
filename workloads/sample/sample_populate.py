@@ -28,7 +28,7 @@
 #
 
 import random
-from helper_testy import *
+from helper import *
 
 # Setup
 connection_config = 'create'
