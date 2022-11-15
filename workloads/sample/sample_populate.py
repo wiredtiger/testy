@@ -59,7 +59,7 @@ def get_dir_size(dir, ignored_files = []):
         return total_size
 
 
-# Setup
+# Setup.
 connection_config = 'create'
 context = Context()
 connection = context.wiredtiger_open(connection_config)
@@ -80,9 +80,9 @@ remainder = num_tables % num_threads
 for i in range(0, table_per_thread * num_threads, table_per_thread):
     start = i
     end = i + table_per_thread
-    x = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
-    threads.append(x)
-    x.start()
+    thread = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
+    threads.append(thread)
+    thread.start()
 
 # Use an extra thread to do the remaining work.
 if remainder > 0:
@@ -94,6 +94,7 @@ if remainder > 0:
 
 for x in threads:
     x.join()
+threads = []
 
 print("Tables created:", num_tables)
 assert len(tables) == num_tables
