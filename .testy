@@ -8,9 +8,11 @@ current_workload =
 
 [testy]
 home_dir     = ${application:testy_dir}/framework
+script_dir   = ${home_dir}/scripts
 service_dir  = ${home_dir}/services
 workload_dir = ${home_dir}/workloads
 git_url      = git@github.com:wiredtiger/testy.git
+parse_script = ${script_dir}/testy_parse.py
 
 [wiredtiger]
 home_dir  = ${application:testy_dir}/wiredtiger

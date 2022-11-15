@@ -17,14 +17,18 @@ testy_config = ".testy"
 @task
 def install(c, branch="develop"):
 
+    # Read configuration file.
+    config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
+    config.read(testy_config)
+
     # Create application user.
-    user = get_value("application", "user")
+    user = config.get("application", "user")
     create_user(c, user)
 
     # Create framework directories.
-    testy_dir = get_value("application", "testy_dir")
-    backup_dir = get_value("application", "backup_dir")
-    database_dir = get_value("application", "database_dir")
+    testy_dir = config.get("application", "testy_dir")
+    backup_dir = config.get("application", "backup_dir")
+    database_dir = config.get("application", "database_dir")
 
     for dir in [testy_dir, backup_dir, database_dir]:
         create_directory(c, dir)
@@ -35,13 +39,17 @@ def install(c, branch="develop"):
 
     # Clone repositories.
     for repo in ["testy", "wiredtiger"]:
-       git_clone(c, get_value(repo, "git_url"), get_value(repo, "home_dir"))
+       git_clone(c, config.get(repo, "git_url"), config.get(repo, "home_dir"))
 
-    # Create symbolic links.
-    create_symlinks(c)
+    # Create working files and directories that can be modified by the framework user.
+    create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
+              testy_dir, user)
+    create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
 
     # Build WiredTiger.
-    build_wiredtiger(c, branch)
+    wt_home_dir = config.get("wiredtiger", "home_dir")
+    wt_build_dir = config.get("wiredtiger", "build_dir")
+    build_wiredtiger(c, wt_home_dir, wt_build_dir, branch)
 
     # Install services.
     # TODO: Update this part of the installation when the service implementation
@@ -56,22 +64,20 @@ def install(c, branch="develop"):
     print(f"The testy framework user is '{user}'")
     print(f"The testy framework directory is '{testy_dir}'")
     print(f"The testy workloads are found in '" +
-          get_value("application", "workload_dir") + "'")
+          config.get("application", "workload_dir") + "'")
     print(f"The database directory is '{database_dir}'")
     print(f"The database backup directory is '{backup_dir}'")
-    print(f"The WiredTiger home directory is '" +
-          get_value("wiredtiger", "home_dir") + "'")
-    print(f"The WiredTiger build directory is '" +
-          get_value("wiredtiger", "build_dir") + "'")
+    print(f"The WiredTiger home directory is '{wt_home_dir}'")
+    print(f"The WiredTiger build directory is '{wt_build_dir}'")
 
 # Run the populate function as defined in the workload interface file.
 @task
 def populate(c, workload):
 
-    wif = get_value("application", "workload_dir") + "/" + workload + ".sh"
+    wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env("environment") + " bash " + wif + " populate"
 
-    if c.sudo(command, user=get_value("application", "user"), warn=True):
+    if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
@@ -90,7 +96,7 @@ def workload(c, upload=None, list=False, describe=None):
     continue running the following options.  
     """
     
-    current_workload = get_value("testy", "cur_workload")
+    current_workload = get_value(c, "application", "current_workload")
 
     # TODO: Implement upload functionality.
     if upload:
@@ -101,9 +107,9 @@ def workload(c, upload=None, list=False, describe=None):
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
     if describe:
-        wif = get_value("testy", "workload_dir") + "/" + describe + "/" + describe + ".sh"
+        wif = get_value(c, "application", "workload_dir") + f"/{describe}/{describe}.sh"
         command = wif + " describe"
-        result = c.sudo(command, user=get_value("application", "user"), warn=True)
+        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True)
         if not result: 
             print(f"Unable to describe '{describe}' workload")
         elif result.stdout == "":
@@ -115,25 +121,42 @@ def workload(c, upload=None, list=False, describe=None):
             print(f"The current workload is {current_workload}")
         else: 
             print("The current workload is unspecified")
-    return  
+
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
 
 # Return the value corresponding to the specified key from the specified section
-# of the testy configuration file.
-def get_value(section, key):
+# of the remote testy configuration file.
+def get_value(c, section, key):
+
+    return parser_get(c, "get_value", section, key)
+
+# Return the key/value pairs in the specified section of the testy configuration file
+# as a single string of shell environment values.
+def get_env(c, section):
+
+    return parser_get(c, "get_env", section, key=None)
+
+# Call the specified parsing function on the remote host.
+def parser_get(c, func, section, key=None):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
     parser.read(testy_config)
 
-    if section not in parser.sections():
-        raise Exit(f"No '{section}' section in file '{testy_config}'.")
-    if not parser.has_option(section, key):
-        raise Exit(f"No '{key}' option in section '{section}'.")
-
-    return parser.get(section, key)
+    config = parser.get("application", "testy_dir") + f"/{testy_config}"
+    script = parser.get("testy", "parse_script")
+    if key:
+        command = f"python3 {script} {func} {config} {section} {key}"
+    else:
+        command = f"python3 {script} {func} {config} {section}"
+    
+    result = c.run(command, warn=True, hide=True)
+    if result:
+        return result.stdout
+    else:
+        raise Exit(f"Error: {result.stderr}")
 
 # Return the key/value pairs in the application section of the testy configuration file
 # as a single string of shell environment values.
@@ -194,26 +217,33 @@ def git_clone(c, git_url, local_dir):
         c.run(f"git clone {git_url} {local_dir}", hide=True)
         print("done!")
 
-# Create framework symlinks.
-def create_symlinks(c):
+# Create a working copy of a file or directory on the remote machine that can
+# be modified by the specified user.
+#   'src' is the full path of the file or directory to copy
+#   'dest' is the full path of the directory to copy into
+def create_working_copy(c, src, dest, user=None):
 
-    if not c.run("test -h " + get_value("application", "workload_dir"), warn=True):
-        with c.cd(get_value("application", "testy_dir")):
-            c.run("ln -s " + get_value("testy", "workload_dir"))
+    print(f"Copying '{src}' to '{dest}' ... ", end='', flush=True)
+    result = c.sudo(f"cp -r {src} {dest}", warn=True, hide=True)
+    if result:
+        print("done!")
+    else:
+        raise Exit(f"failed\n{result.stderr}")
+    if user:
+        dest_name = f"{dest}/" + Path(src).name
+        print(f"Updating user to '{user}' for '{dest_name}'")
+        c.sudo(f"chown -R {user}:{user} {dest_name}")
 
 # Build WiredTiger for the specified branch.
-def build_wiredtiger(c, branch):
+def build_wiredtiger(c, home_dir, build_dir, branch):
 
-    wt_home_dir = get_value("wiredtiger", "home_dir")
-    wt_build_dir = get_value("wiredtiger", "build_dir")
-
-    with c.cd(wt_home_dir):
+    with c.cd(home_dir):
         print(f"Checking out git branch '{branch}' ... ", end='', flush=True)
         c.run(f"git checkout {branch}")
         c.run("git pull", hide=True)
         c.run("rm -rf build && mkdir build")
 
-    with c.cd(wt_build_dir):
+    with c.cd(build_dir):
         ninja_build = c.run("which ninja", warn=True, hide=True)
 
         print("Configuring WiredTiger")
@@ -267,10 +297,9 @@ def install_packages(c):
 def install_service(c, service):
 
     print(f"Installing service '{service}' ... ", end='', flush=True)
-    file = get_value("testy", "service_dir")
-    if not c.run(f"test -f {file}", warn=True):
+    if not c.run(f"test -f {service}", warn=True):
         print("failed")
         print(f"-- Unable to install service: File not found.")
     else:
-        c.sudo(f"cp {file} /etc/systemd/system && systemctl daemon-reload")
+        c.sudo(f"cp {service} /etc/systemd/system && systemctl daemon-reload")
         print("done!")
