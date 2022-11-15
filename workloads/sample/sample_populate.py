@@ -74,32 +74,19 @@ context = Context()
 connection = context.wiredtiger_open(connection_config)
 
 # Create tables.
-num_tables = 1000
+num_threads = 10
+tables_per_thread = 100
+num_tables = num_threads * tables_per_thread
 tables = []
 table_config = 'key_format=S,value_format=S'
 
-num_threads = 10
 threads = list()
-if num_threads > num_tables:
-    num_threads = num_tables
-table_per_thread = num_tables // num_threads
-remainder = num_tables % num_threads
-
-# Split the work among the threads.
-for i in range(0, table_per_thread * num_threads, table_per_thread):
-    start = i
-    end = i + table_per_thread
+for i in range(0, num_threads):
+    start = i * tables_per_thread
+    end = start + tables_per_thread
     thread = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
     threads.append(thread)
     thread.start()
-
-# Use an extra thread to do the remaining work.
-if remainder > 0:
-    start = table_per_thread * num_threads
-    end = num_tables
-    x = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
-    threads.append(x)
-    x.start()
 
 for x in threads:
     x.join()
