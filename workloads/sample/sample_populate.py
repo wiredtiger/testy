@@ -28,6 +28,7 @@
 #
 
 import os
+import psutil
 import random
 import threading as pythread
 from workgen import *
@@ -59,8 +60,16 @@ def get_dir_size(dir, ignored_files = []):
         return total_size
 
 
-# Setup.
-connection_config = 'create'
+# Setup the WiredTiger connection.
+# MongoDB allocates the following memory for the WiredTiger cache size:
+# (total memory available - 1GB) / 2
+total_memory_bytes = psutil.virtual_memory().total
+cache_size_gb = int(total_memory_bytes / 1e9)
+if total_memory_bytes > 1e9:
+    cache_size_gb = int(((total_memory_bytes - 1e9) / 2) / 1e9)
+
+connection_config = f'create,cache_size={cache_size_gb}GB'
+
 context = Context()
 connection = context.wiredtiger_open(connection_config)
 
