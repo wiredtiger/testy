@@ -102,16 +102,22 @@ assert len(tables) == num_tables
 kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
+
+min_record_size = 1
+max_record_size = 100 * kb
+
+current_dir_size = 0
 target_size = 100 * gb
+
 print('Populating the database...', end='')
-while True:
+while current_dir_size < target_size:
 
     # Select a random table.
     table_idx = random.randint(0, num_tables - 1)
 
     # Create the insert operation.
     insert_op = Operation(Operation.OP_INSERT, tables[table_idx], Key(Key.KEYGEN_AUTO,
-        random.randint(20, 100)), Value(random.randint(20, 100)))
+        random.randint(min_record_size, max_record_size)), Value(random.randint(min_record_size + 1, max_record_size)))
 
     # Allocate a thread.
     thread = Thread(insert_op)
@@ -121,13 +127,12 @@ while True:
     pop_workload.run(connection)
 
     # Check the current size of the database ignoring the report file.
-    report_file = pop_workload.options.report_file
-    if get_dir_size("WT_TEST", pop_workload.options.report_file) > target_size:
-        break
+    current_dir_size = get_dir_size(context.args.home, pop_workload.options.report_file)
 
 # Finish with a checkpoint to make all data durable.
 checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
 thread = Thread(checkpoint_op)
 checkpoint_workload = Workload(context, thread)
 checkpoint_workload.run(connection)
+
 print(' DONE')
