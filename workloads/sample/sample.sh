@@ -2,7 +2,7 @@
 # Initial sample workload for use with the Testy framework.
 
 describe() {
-    :
+    echo "A sample workload for use with the testy framework."
 }
 
 populate() {
@@ -11,11 +11,11 @@ populate() {
 }
 
 run() {
-    :
+    echo "run(): Not yet implemented."
 }
 
 validate() {
-    :
+    echo "validate(): Not yet implemented."
 }
 
 "$@"
