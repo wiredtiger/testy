@@ -30,6 +30,11 @@ def get_env(config, section):
         env += k + "=" + v + " "
     print(env, end='', flush=True)
 
+# This allows us to call script functions by name from the command line with an
+# arbitrary number of parameters. Example usage is:
+# 
+#   $ python3 testy_parse.py get_env '/srv/testy/.testy' 'environment'
+#   $ python3 testy_parse.py get_value '/srv/testy/.testy' 'application' 'user'
 #
 if __name__ == "__main__":
 
