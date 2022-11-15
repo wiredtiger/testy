@@ -137,7 +137,7 @@ def get_value(c, section, key):
 # as a single string of shell environment values.
 def get_env(c, section):
 
-    return parser_get(c, "get_env", section, key=None)
+    return parser_get(c, "get_env", section)
 
 # Call the specified parsing function on the remote host.
 def parser_get(c, func, section, key=None):
