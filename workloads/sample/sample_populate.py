@@ -63,10 +63,7 @@ def get_dir_size(dir, ignored_files = []):
 # Setup the WiredTiger connection.
 # MongoDB allocates the following memory for the WiredTiger cache size:
 # (total memory available - 1GB) / 2
-total_memory_bytes = psutil.virtual_memory().total
-cache_size_gb = int(total_memory_bytes / 1e9)
-if total_memory_bytes > 1e9:
-    cache_size_gb = int(((total_memory_bytes - 1e9) / 2) / 1e9)
+cache_size_gb = int(((psutil.virtual_memory().total - 1e9) / 2) / 1e9)
 
 connection_config = f'create,cache_size={cache_size_gb}GB'
 
