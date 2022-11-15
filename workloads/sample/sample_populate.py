@@ -50,7 +50,7 @@ def create_table(connection, start, end, table_config):
 
 
 def get_dir_size(dir, ignored_files = []):
-    """Gets the size in bytes of a directory"""
+    """Gets the size of a directory in bytes"""
     with os.scandir(dir) as entries:
         total_size = 0
         for entry in entries:
@@ -99,7 +99,7 @@ threads = []
 print("Tables created:", num_tables)
 assert len(tables) == num_tables
 
-# Insert random key/value pairs in all tables until reaching a size limit.
+# Insert random key/value pairs in all tables until it reaches the size limit.
 kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
