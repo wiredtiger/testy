@@ -117,7 +117,7 @@ while current_dir_size < target_size:
 
     # Create the insert operation.
     insert_op = Operation(Operation.OP_INSERT, tables[table_idx], Key(Key.KEYGEN_AUTO,
-        random.randint(min_record_size, max_record_size)), Value(random.randint(min_record_size + 1, max_record_size)))
+        random.randint(min_record_size + 1, max_record_size)), Value(random.randint(min_record_size, max_record_size)))
 
     # Allocate a thread.
     thread = Thread(insert_op)
