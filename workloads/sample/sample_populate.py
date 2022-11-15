@@ -34,8 +34,8 @@ import threading as pythread
 from workgen import *
 
 
-def create_table(connection, start, end, table_config):
-    """Creates a table"""
+def create_tables(connection, start, end, table_config):
+    """Creates tables"""
     global tables
     tmp_tables = []
 
@@ -81,7 +81,7 @@ threads = list()
 for i in range(0, num_threads):
     start = i * tables_per_thread
     end = start + tables_per_thread
-    thread = pythread.Thread(target=create_table, args=(connection, start, end, table_config))
+    thread = pythread.Thread(target=create_tables, args=(connection, start, end, table_config))
     threads.append(thread)
     thread.start()
 
