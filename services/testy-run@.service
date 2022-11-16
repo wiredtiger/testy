@@ -1,0 +1,12 @@
+[Unit]
+Description="testy-run: A 24/7 WiredTiger workload service"
+Documentation=https://github.com/wiredtiger/testy
+
+[Service]
+User=testy
+Group=testy
+Restart=no
+ExecStart=/bin/bash -c '${workload_dir}/%I/%I.sh run'
+ExecStop=
+StandardOutput = kmsg+console
+StandardError = kmsg+console
