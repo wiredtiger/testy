@@ -101,8 +101,21 @@ def workload(c, upload=None, list=False, describe=None):
     # TODO: Implement upload functionality.
     if upload:
         print("Upload to be implemented") 
+        
+    # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
-        print("Listing to be implemented")
+        command = "ls " + get_value(c, "application", "workload_dir")
+        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True, hide=True)
+        if result.ok:
+            print("\n\033[1mAvailable workloads: \033[0m")
+            if current_workload:
+                workloads = result.stdout.replace(current_workload, \
+                    f"\033[1;35m{current_workload} (active)\033[0m")
+                print(workloads)
+            else:
+                print(result.stdout)
+        else:
+            print(result.stderr)
 
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
