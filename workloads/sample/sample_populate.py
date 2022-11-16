@@ -125,11 +125,15 @@ while current_db_size < target_db_size:
     # Allocate a thread.
     thread = Thread(insert_op)
 
-    # Generate and start the workload.
+    # Start the workload.
+    # The next generated key/value pair may not fit in the randomly generated size, simply retry if
+    # this is the case.
     pop_workload = Workload(context, thread)
-    pop_workload.run(connection)
-
-    current_db_size += key_size + value_size
+    try:
+        pop_workload.run(connection)
+        current_db_size += key_size + value_size
+    except Exception as e:
+        assert str(e).lower().find('too large for') >= 0
 
 # Finish with a checkpoint to make all data durable.
 checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
