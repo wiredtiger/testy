@@ -134,7 +134,9 @@ def workload(c, upload=None, list=False, describe=None):
     current_workload = get_value(c, "application", "current_workload")
 
     # TODO: Implement upload functionality.
-
+    if upload:
+        print("Upload to be implemented") 
+        
     # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
         command = "ls " + get_value(c, "application", "workload_dir")
