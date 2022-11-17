@@ -112,7 +112,7 @@ current_db_size = 0
 target_db_size = 100 * gb
 progress_pct = 10
 
-print('Populating the database...', flush=True)
+print('Populating the database...', end='\r', flush=True)
 while current_db_size < target_db_size:
 
     # Select a random table.
@@ -140,11 +140,11 @@ while current_db_size < target_db_size:
 
     if ((current_db_size * 100) // target_db_size) > progress_pct:
         checkpoint(context, connection)
-        print(f"Populating the database... {progress_pct}%", flush=True)
+        print(f"Populating the database... {progress_pct}%", end='\r', flush=True)
         progress_pct += 10
 
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
 
-print(f"Populating the database... Done", flush=True)
+print(f"Populating the database... Done.", flush=True)
 print(f"Database size: {current_db_size / 1e9} GB")
