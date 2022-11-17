@@ -140,6 +140,7 @@ while current_db_size < target_db_size:
 
     if ((current_db_size * 100) // target_db_size) > progress_pct:
         checkpoint(context, connection)
+        print(f"Populating the database... {progress_pct}%", flush=True)
         progress_pct += 10
 
 # Finish with a checkpoint to make all data durable.
