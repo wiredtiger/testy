@@ -8,5 +8,5 @@ Group=testy
 Restart=no
 ExecStart=/bin/bash -c '${workload_dir}/%I/%I.sh run'
 ExecStop=
-StandardOutput = kmsg+console
-StandardError = kmsg+console
+StandardOutput=kmsg+console
+StandardError=kmsg+console
