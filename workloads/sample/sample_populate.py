@@ -42,8 +42,6 @@ def generate_random_string(length):
 
 
 def create_tables(connection, num_tables, name_length, table_config):
-    """Creates tables"""
-
     assert name_length > 0
 
     global tables
@@ -65,7 +63,6 @@ def create_tables(connection, num_tables, name_length, table_config):
 
 
 def checkpoint(context, connection):
-    print("Checkpoint!")
     checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
     thread = Thread(checkpoint_op)
     checkpoint_workload = Workload(context, thread)
