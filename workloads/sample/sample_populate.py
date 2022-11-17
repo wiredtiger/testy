@@ -64,6 +64,13 @@ def create_tables(connection, num_tables, name_length, table_config):
             assert str(e).lower().find('file exists') >= 0
 
 
+def checkpoint(context, connection):
+    print("Checkpoint!")
+    checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
+    thread = Thread(checkpoint_op)
+    checkpoint_workload = Workload(context, thread)
+    checkpoint_workload.run(connection)
+
 # Setup the WiredTiger connection.
 # MongoDB allocates the following memory for the WiredTiger cache size:
 # (total memory available - 1GB) / 2
@@ -108,8 +115,9 @@ max_record_size = 100 * kb
 
 current_db_size = 0
 target_db_size = 100 * gb
+progress_pct = 10
 
-print('Populating the database...', end='', flush=True)
+print('Populating the database...', flush=True)
 while current_db_size < target_db_size:
 
     # Select a random table.
@@ -135,11 +143,12 @@ while current_db_size < target_db_size:
     except Exception as e:
         assert str(e).lower().find('too large for') >= 0
 
-# Finish with a checkpoint to make all data durable.
-checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
-thread = Thread(checkpoint_op)
-checkpoint_workload = Workload(context, thread)
-checkpoint_workload.run(connection)
+    if current_db_size * 100 // target_db_size > progress_pct:
+        checkpoint(context, connection)
+        progress_pct += 10
 
-print(' Done.')
-print(f"Database size : {current_db_size / 1e9} GB")
+# Finish with a checkpoint to make all data durable.
+checkpoint(context, connection)
+
+print(f"Populating the database... Done", flush=True)
+print(f"Database size: {current_db_size / 1e9} GB")
