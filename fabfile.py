@@ -55,8 +55,8 @@ def install(c, branch="develop"):
     # TODO: Update this part of the installation when the service implementation
     #       is complete, and add properties in .testy for the service filenames.
     install_service(c, config.get("testy", "testy_service"))
-    install_service(c, config.get("testy", "backup_service"))
-    install_service(c, config.get("testy", "crash_service"))
+    #install_service(c, config.get("testy", "backup_service"))
+    #install_service(c, config.get("testy", "crash_service"))
 
     # Print installation summary on success.
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -348,7 +348,7 @@ def install_service(c, service):
     print(f"Installing service '{service_name}' ... ", end='', flush=True)
     if not c.run(f"test -f {service}", warn=True):
         print("failed")
-        print(f"-- Unable to install '{service}': File not found.")
+        raise Exit(f"-- Unable to install '{service}': File not found.")
     else:
         conf_dir = f"/etc/systemd/system/{service_name}.d"
         c.sudo(f"mkdir -p {conf_dir}")
