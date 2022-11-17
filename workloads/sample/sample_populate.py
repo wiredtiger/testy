@@ -45,7 +45,6 @@ def create_tables(connection, num_tables, name_length, table_config):
     assert name_length > 0
 
     global tables
-    lock = pythread.Lock()
     session = connection.open_session()
     i = 0
 
@@ -54,9 +53,8 @@ def create_tables(connection, num_tables, name_length, table_config):
         # It is possible to have a collision if the table has already been created, simply retry.
         try:
             session.create(table_name, table_config)
-            # Make sure other threads are aware of the new table.
-            with lock:
-                tables.append(Table(table_name))
+            # The GIL guarantees the following to be thread safe.
+            tables.append(Table(table_name))
             i += 1
         except wiredtiger.WiredTigerError as e:
             assert str(e).lower().find('file exists') >= 0
