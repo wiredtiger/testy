@@ -57,7 +57,7 @@ def create_tables(connection, num_tables, name_length, table_config):
             tables.append(Table(table_name))
             i += 1
         except wiredtiger.WiredTigerError as e:
-            assert str(e).lower().find('file exists') >= 0
+            assert 'file exists' in str(e).lower()
 
 
 def checkpoint(context, connection):
