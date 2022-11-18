@@ -33,6 +33,7 @@ def install(c, branch="develop"):
     for dir in [testy_dir, backup_dir, database_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
+    c.sudo(f"chown -R {user}:{user} {database_dir}")
 
     # Install prerequisite software.
     install_packages(c)
