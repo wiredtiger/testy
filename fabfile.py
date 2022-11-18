@@ -1,7 +1,7 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import configparser as cp
+import re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
@@ -55,8 +55,9 @@ def install(c, branch="develop"):
     # Install services.
     # TODO: Update this part of the installation when the service implementation
     #       is complete, and add properties in .testy for the service filenames.
-    install_service(c, "backup")
-    install_service(c, "crash_test")
+    install_service(c, config.get("testy", "testy_service"))
+    #install_service(c, config.get("testy", "backup_service"))
+    #install_service(c, config.get("testy", "crash_service"))
 
     # Print installation summary on success.
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -83,6 +84,40 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
+# Start the framework using the specified workload. This function starts three services:
+#   (1) testy-run executes the run function as defined in the workload interface file
+#   (2) testy-backup
+#   (3) testy-crash
+@task
+def start(c, workload):
+
+    service_path = get_value(c, "testy", "testy_service")
+    service_name = Path(service_path).name
+    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+    testy = "\033[1;36mtesty\033[0m"
+
+    # Is testy running already?
+    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        c.sudo(f"systemctl status {service}")
+        raise Exit(f"\n{testy} is already running. Use 'fab restart' to change the workload.")
+
+    # Verify the specified workload exists.
+    wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
+    if not c.run(f"test -f {wif}", warn=True):
+        raise Exit(f"\nUnable to start {testy}: Workload {workload} not found.")
+
+    # First start the testy-run service which controls the long-running workload.
+    c.sudo(f"systemctl start {service} && systemctl status {service}", user="root")
+    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        set_value(c, "application", "current_workload", workload)
+        print(f"\nStarted {testy} running workload '{workload}'!")
+    else:
+        raise Exit("\nUnable to start {testy}.")
+
+    # Then start the backup and crash trigger services (OR start them as part of the
+    # testy-run service).
+    # TODO: Update the start function when the service implementations are complete
+
 # The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
 # provided, the current workload is returned.
 @task
@@ -96,7 +131,6 @@ def workload(c, upload=None, list=False, describe=None):
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
     """
-    
     current_workload = get_value(c, "application", "current_workload")
 
     # TODO: Implement upload functionality.
@@ -110,11 +144,9 @@ def workload(c, upload=None, list=False, describe=None):
         if result.ok:
             print("\n\033[1mAvailable workloads: \033[0m")
             if current_workload:
-                workloads = result.stdout.replace(current_workload, \
-                    f"\033[1;35m{current_workload} (active)\033[0m")
-                print(workloads)
-            else:
-                print(result.stdout)
+                result.stdout = re.sub(r"(?<!-)\b%s(?!-)\b" % current_workload, \
+                    f"\033[1;35m{current_workload} (active)\033[0m", result.stdout)
+            print(result.stdout)
         else:
             print(result.stderr)
 
@@ -145,47 +177,49 @@ def workload(c, upload=None, list=False, describe=None):
 # of the remote testy configuration file.
 def get_value(c, section, key):
 
-    return parser_get(c, "get_value", section, key)
+    return parser_operation(c, "get_value", section, key)
 
 # Return the key/value pairs in the specified section of the testy configuration file
 # as a single string of shell environment values.
 def get_env(c, section):
 
-    return parser_get(c, "get_env", section)
+    return parser_operation(c, "get_env", section)
+
+# Return a string suitable for generating a drop-in .conf file of environment
+# values for the testy systemd services.
+def get_systemd_service_conf(c, section):
+
+    return parser_operation(c, "get_systemd_service_conf", section)
+
+# Set the value corresponding to the specified key from the specified section
+# of the testy configuration file.
+def set_value(c, section, key, value):
+
+    return parser_operation(c, "set_value", section, key, value)
 
 # Call the specified parsing function on the remote host.
-def parser_get(c, func, section, key=None):
+def parser_operation(c, func, section, key=None, value=None):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
     parser.read(testy_config)
 
     config = parser.get("application", "testy_dir") + f"/{testy_config}"
     script = parser.get("testy", "parse_script")
+    user = parser.get("application", "user")
+
     if key:
-        command = f"python3 {script} {func} {config} {section} {key}"
+        if value:
+            command = f"python3 {script} {func} {config} {section} {key} {value}"
+        else:
+            command = f"python3 {script} {func} {config} {section} {key}"
     else:
         command = f"python3 {script} {func} {config} {section}"
-    
-    result = c.run(command, warn=True, hide=True)
+
+    result = c.sudo(command, user=user, warn=True, hide=True)
     if result:
         return result.stdout
     else:
         raise Exit(f"Error: {result.stderr}")
-
-# Return the key/value pairs in the application section of the testy configuration file
-# as a single string of shell environment values.
-def get_env(section):
-
-    parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    parser.read(testy_config)
-
-    if section not in parser.sections():
-        raise Exit(f"No '{section}' section in file '{testy_config}'.")
-
-    env = ""
-    for k, v in parser.items(section):
-        env += k + "=" + v + " "
-    return env
 
 # Create framework superuser account.
 def create_user(c, username):
@@ -307,13 +341,18 @@ def install_packages(c):
 
     print("-- Package installation complete!")
 
-# Install services.
+# Install a systemd service.
 def install_service(c, service):
 
-    print(f"Installing service '{service}' ... ", end='', flush=True)
+    service_name = Path(service).name
+    print(f"Installing service '{service_name}' ... ", end='', flush=True)
     if not c.run(f"test -f {service}", warn=True):
         print("failed")
-        print(f"-- Unable to install service: File not found.")
+        raise Exit(f"-- Unable to install '{service}': File not found.")
     else:
-        c.sudo(f"cp {service} /etc/systemd/system && systemctl daemon-reload")
+        conf_dir = f"/etc/systemd/system/{service_name}.d"
+        c.sudo(f"mkdir -p {conf_dir}")
+        conf = get_systemd_service_conf(c, "environment")
+        c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
+        c.sudo(f"cp {service} /etc/systemd/system && sudo systemctl daemon-reload")
         print("done!")
