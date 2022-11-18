@@ -27,7 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import psutil
+import os
 import random
 import string
 import threading as pythread
@@ -69,7 +69,8 @@ def checkpoint(context, connection):
 # Setup the WiredTiger connection.
 # MongoDB allocates the following memory for the WiredTiger cache size:
 # (total memory available - 1GB) / 2
-cache_size_gb = int(((psutil.virtual_memory().total - 1e9) / 2) / 1e9)
+total_memory = int(os.popen('free -t -b').readlines()[-1].split()[1:][0])
+cache_size_gb = int(((total_memory - 1e9) / 2) / 1e9)
 
 connection_config = f'create,cache_size={cache_size_gb}GB'
 
