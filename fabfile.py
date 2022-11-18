@@ -2,7 +2,6 @@
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
 import re, configparser as cp
-import shutil 
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
