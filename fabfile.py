@@ -106,13 +106,12 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload {workload} not found.")
 
     # First start the testy-run service which controls the long-running workload.
-    if not c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-        c.sudo(f"systemctl start {service} && systemctl status {service}")
-        if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-            set_value(c, "application", "current_workload", workload)
-            print(f"\nStarted {testy} running workload '{workload}'!")
-        else:
-            raise Exit("\nUnable to start {testy}.")
+    c.sudo(f"systemctl start {service} && systemctl status {service}", user="root")
+    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        set_value(c, "application", "current_workload", workload)
+        print(f"\nStarted {testy} running workload '{workload}'!")
+    else:
+        raise Exit("\nUnable to start {testy}.")
 
     # Then start the backup and crash trigger services (OR start them as part of the
     # testy-run service).
