@@ -79,6 +79,8 @@ def populate(c, workload):
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env(c, "environment") + " bash " + wif + " populate"
 
+    # Update the current workload.
+    set_value(c, "application", "current_workload", workload)
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
         print(f"populate succeeded for workload '{workload}'")
     else:
