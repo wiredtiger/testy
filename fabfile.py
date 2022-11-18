@@ -77,7 +77,7 @@ def install(c, branch="develop"):
 def populate(c, workload):
 
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
-    command = get_env("environment") + " bash " + wif + " populate"
+    command = get_env(c, "environment") + " bash " + wif + " populate"
 
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
         print(f"populate succeeded for workload '{workload}'")
