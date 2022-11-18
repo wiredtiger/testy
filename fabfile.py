@@ -2,6 +2,7 @@
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
 import configparser as cp
+import shutil 
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
@@ -97,15 +98,29 @@ def workload(c, upload=None, list=False, describe=None):
     """
     
     current_workload = get_value(c, "application", "current_workload")
+    user = get_value(c, "application", "user")
 
-    # TODO: Implement upload functionality.
+    # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
+    # the archive, including the archive name. This will be uploaded to the testy server, and the
+    # archive will be unpacked in the workloads directory. 
     if upload:
-        print("Upload to be implemented") 
-        
+        try: 
+            dest = get_value(c, "application", "workload_dir")
+            src = dest + f"/{upload}"
+            script = get_value(c, "testy", "unpack_script")
+
+            c.put(upload, "/tmp", preserve_mode=True)
+            c.sudo(f"cp /tmp/{upload} " + src , user=user, warn=True)
+            c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
+
+        except Exception as e:
+            print(e)
+            print(f"Upload failed for workload {upload}")
+
     # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
         command = "ls " + get_value(c, "application", "workload_dir")
-        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True, hide=True)
+        result = c.sudo(command, user=user, warn=True, hide=True)
         if result.ok:
             print("\n\033[1mAvailable workloads: \033[0m")
             if current_workload:
@@ -122,7 +137,7 @@ def workload(c, upload=None, list=False, describe=None):
     if describe:
         wif = get_value(c, "application", "workload_dir") + f"/{describe}/{describe}.sh"
         command = wif + " describe"
-        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True)
+        result = c.sudo(command, user=user, warn=True)
         if not result: 
             print(f"Unable to describe '{describe}' workload")
         elif result.stdout == "":
