@@ -76,6 +76,13 @@ def install(c, branch="develop"):
 @task
 def populate(c, workload):
 
+    testy = "\033[1;36mtesty\033[0m"
+
+    # TODO: Can populate be executed if testy is already running?
+    is_running, _ = is_testy_running(c, workload)
+    if is_running:
+        raise Exit(f"\nThe populate command cannot be executed when {testy} is running.")
+
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env(c, "environment") + " bash " + wif + " populate"
 
@@ -93,13 +100,11 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
-    service_path = get_value(c, "testy", "testy_service")
-    service_name = Path(service_path).name
-    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
     testy = "\033[1;36mtesty\033[0m"
 
     # Is testy running already?
-    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+    is_running, service = is_testy_running(c, workload)
+    if is_running:
         c.sudo(f"systemctl status {service}")
         raise Exit(f"\n{testy} is already running. Use 'fab restart' to change the workload.")
 
@@ -358,3 +363,12 @@ def install_service(c, service):
         c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
         c.sudo(f"cp {service} /etc/systemd/system && sudo systemctl daemon-reload")
         print("done!")
+
+# Check if testy is running and return the service corresponding to the workload.
+def is_testy_running(c, workload):
+
+    service_path = get_value(c, "testy", "testy_service")
+    service_name = Path(service_path).name
+    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+    is_running = c.sudo(f"systemctl is-active {service}", hide=True, warn=True)
+    return is_running, service
