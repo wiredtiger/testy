@@ -122,7 +122,7 @@ def start(c, workload):
 @task
 def workload(c, upload=None, list=False, describe=None):
     """ Upload, list, and describe workloads. 
-    Up three optional arguments can be taken at a time. If more than one option is specified at
+    Up to three optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
        2. list
@@ -134,16 +134,16 @@ def workload(c, upload=None, list=False, describe=None):
     user = get_value(c, "application", "user")
 
     # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
-    # the archive, including the archive name. This will be uploaded to the testy server, and the
-    # archive will be unpacked in the workloads directory. 
+    # the archive, including the archive name. After it is uploaded to the server, the archive gets
+    # unpacked in the workloads directory. 
     if upload:
         try: 
             dest = get_value(c, "application", "workload_dir")
-            src = dest + f"/{upload}"
+            src = f"{dest}/{upload}"
             script = get_value(c, "testy", "unpack_script")
 
             c.put(upload, "/tmp", preserve_mode=True)
-            c.sudo(f"cp /tmp/{upload} " + src , user=user, warn=True)
+            c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
             c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
 
         except Exception as e:

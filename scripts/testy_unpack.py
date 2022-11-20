@@ -8,8 +8,7 @@ def unpack_archive(src, dest):
 # This allows us to call script functions by name from the command line with an
 # arbitrary number of parameters. Example usage is:
 # 
-#   $ python3 testy_parse.py get_env '/srv/testy/.testy' 'environment'
-#   $ python3 testy_parse.py get_value '/srv/testy/.testy' 'application' 'user'
+#   $ python3 testy_unpack.py unpack_archive 'src_path' 'dest_path'
 #
 if __name__ == "__main__":
 
