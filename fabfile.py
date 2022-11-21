@@ -144,7 +144,7 @@ def workload(c, upload=None, list=False, describe=None):
         workload_name = Path(src).stem.split('.')[0]
         exists = overwrite = False
 
-        if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True, hide=True):
+        if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True):
             exists = True
             overwrite = confirm(f"Workload '{workload_name}' already exists, would you like to " \
                 + "overwrite it?", assume_yes=True)
