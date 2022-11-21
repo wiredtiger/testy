@@ -6,6 +6,7 @@ from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
+import logging 
 
 testy_config = ".testy"
 
@@ -145,23 +146,27 @@ def workload(c, upload=None, list=False, describe=None):
 
         if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True):
             exists = True
-            overwrite = confirm(f"Workload '{workload_name}' already exists, would you like to " \
-                + "overwrite it?", assume_yes=True)
+            overwrite = confirm(f"Workload '{workload_name}' already exists. Would you like to " \
+                + "overwrite it?", assume_yes=False)
             if not overwrite:
-                print(f"The workload {workload_name} has not been uploaded. ")
+                print(f"The workload '{workload_name}' has not been uploaded. ")
         
         if exists == overwrite:
             script = get_value(c, "testy", "unpack_script")
             try: 
                 c.put(upload, "/tmp", preserve_mode=True)
-                c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
-                c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
             except Exception as e:
                 print(e)
-                print(f"Upload failed for workload {workload_name}.")
+                print(f"Upload failed for workload '{workload_name}'.")
             else:
-                print(f"Upload succeeded for workload {workload_name}.")
-                c.sudo(f"rm {src}")
+                copy = c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
+                unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
+                    warn=True)
+                if copy and unpack: 
+                    print(f"Upload succeeded for workload '{workload_name}' and ready for use.")
+                else:
+                    print(f"Workload '{workload_name}' failed to copy and unpack.")
+                c.sudo(f"rm -f {src} /tmp/{upload}")
 
     # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
