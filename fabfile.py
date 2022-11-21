@@ -140,7 +140,6 @@ def workload(c, upload=None, list=False, describe=None):
     if upload:
         dest = get_value(c, "application", "workload_dir")
         src = f"{dest}/{upload}"
-        script = get_value(c, "testy", "unpack_script")
         workload_name = Path(src).stem.split('.')[0]
         exists = overwrite = False
 
@@ -149,9 +148,10 @@ def workload(c, upload=None, list=False, describe=None):
             overwrite = confirm(f"Workload '{workload_name}' already exists, would you like to " \
                 + "overwrite it?", assume_yes=True)
             if not overwrite:
-                print(f"Unable to upload workload {workload_name}. ")
+                print(f"The workload {workload_name} has not been uploaded. ")
         
         if exists == overwrite:
+            script = get_value(c, "testy", "unpack_script")
             try: 
                 c.put(upload, "/tmp", preserve_mode=True)
                 c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
