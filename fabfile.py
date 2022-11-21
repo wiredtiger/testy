@@ -33,6 +33,7 @@ def install(c, branch="develop"):
     for dir in [testy_dir, backup_dir, database_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
+    c.sudo(f"chown -R {user}:{user} {database_dir}")
 
     # Install prerequisite software.
     install_packages(c)
@@ -75,10 +76,19 @@ def install(c, branch="develop"):
 @task
 def populate(c, workload):
 
+    testy = "\033[1;36mtesty\033[0m"
+
+    # TODO: Can populate be executed if testy is already running?
+    service = get_testy_service_name(c)
+    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        raise Exit(f"\nThe populate command cannot be executed when {testy} is running.")
+
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
-    command = get_env("environment") + " bash " + wif + " populate"
+    command = get_env(c, "environment") + " bash " + wif + " populate"
 
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
+        # Update the current workload.
+        set_value(c, "application", "current_workload", workload)
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
@@ -90,12 +100,10 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
-    service_path = get_value(c, "testy", "testy_service")
-    service_name = Path(service_path).name
-    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
     testy = "\033[1;36mtesty\033[0m"
 
     # Is testy running already?
+    service = get_testy_service_name(c)
     if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
         c.sudo(f"systemctl status {service}")
         raise Exit(f"\n{testy} is already running. Use 'fab restart' to change the workload.")
@@ -355,3 +363,11 @@ def install_service(c, service):
         c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
         c.sudo(f"cp {service} /etc/systemd/system && sudo systemctl daemon-reload")
         print("done!")
+
+# Get the testy service name of the current workload.
+def get_testy_service_name(c):
+
+    service_path = get_value(c, "testy", "testy_service")
+    service_name = Path(service_path).name
+    workload = get_value(c, "application", "current_workload")
+    return f"$(systemd-escape --template {service_name} \"{workload}\")"
