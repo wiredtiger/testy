@@ -57,7 +57,7 @@ def create_tables(connection, num_tables, name_length, table_config):
             tables.append(Table(table_name))
             i += 1
         except wiredtiger.WiredTigerError as e:
-            assert 'file exists' in str(e).lower()
+            assert "file exists" in str(e).lower()
 
 
 def checkpoint(context, connection):
@@ -69,10 +69,10 @@ def checkpoint(context, connection):
 # Setup the WiredTiger connection.
 # MongoDB allocates the following memory for the WiredTiger cache size:
 # (total memory available - 1GB) / 2
-total_memory = int(os.popen('free -t -b').readlines()[-1].split()[1:][0])
+total_memory = int(os.popen("free -t -b").readlines()[-1].split()[1:][0])
 cache_size_gb = int(((total_memory - 1e9) / 2) / 1e9)
 
-connection_config = f'create,cache_size={cache_size_gb}GB'
+connection_config = f"create,cache_size={cache_size_gb}GB"
 
 context = Context()
 connection = context.wiredtiger_open(connection_config)
@@ -84,10 +84,10 @@ num_tables = num_threads * tables_per_thread
 tables = []
 # This allows enough combinations.
 table_name_length = 4
-table_config = 'key_format=S,value_format=S,exclusive'
+table_config = "key_format=S,value_format=S,exclusive"
 
 threads = list()
-print(f'Creating {num_tables} tables ...', end='', flush=True)
+print(f"Creating {num_tables} tables ...", end='', flush=True)
 for i in range(0, num_threads):
     thread = pythread.Thread(target=create_tables, args=(connection, tables_per_thread,
         table_name_length, table_config))
@@ -98,7 +98,7 @@ for x in threads:
     x.join()
 threads = []
 
-print(' Done.', flush=True)
+print(" Done.", flush=True)
 assert len(tables) == num_tables
 
 # Insert random key/value pairs in all tables until it reaches the size limit.
@@ -113,7 +113,7 @@ current_db_size = 0
 target_db_size = 100 * gb
 progress_pct = 0
 
-print('', end='\rPopulating the database ...', flush=True)
+print('', end="\rPopulating the database ...", flush=True)
 while current_db_size < target_db_size:
 
     # Select a random table.
@@ -137,7 +137,7 @@ while current_db_size < target_db_size:
         pop_workload.run(connection)
         current_db_size += (key_size + value_size)
     except Exception as e:
-        assert 'too large for' in str(e).lower()
+        assert "too large for" in str(e).lower()
 
     if ((current_db_size * 100) // target_db_size) > progress_pct:
         checkpoint(context, connection)
