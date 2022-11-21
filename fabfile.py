@@ -141,7 +141,7 @@ def workload(c, upload=None, list=False, describe=None):
         dest = get_value(c, "application", "workload_dir")
         src = f"{dest}/{upload}"
         script = get_value(c, "testy", "unpack_script")
-        workload_name = c.run(f"basename {src} | cut -d. -f1", hide=True).stdout.strip()
+        workload_name = Path(src).stem.split('.')[0]
         exists = overwrite = False
 
         if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True, hide=True):
@@ -158,9 +158,9 @@ def workload(c, upload=None, list=False, describe=None):
                 c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
             except Exception as e:
                 print(e)
-                print(f"Upload failed for workload {workload_name}")
+                print(f"Upload failed for workload {workload_name}.")
             else:
-                print(f"Upload succeeded for workload {workload_name}")
+                print(f"Upload succeeded for workload {workload_name}.")
                 c.sudo(f"rm {src}")
 
     # Lists the available workloads in the workloads directory and highlights the current workload.
@@ -183,16 +183,16 @@ def workload(c, upload=None, list=False, describe=None):
         command = wif + " describe"
         result = c.sudo(command, user=user, warn=True)
         if not result: 
-            print(f"Unable to describe '{describe}' workload")
+            print(f"Unable to describe '{describe}' workload.")
         elif result.stdout == "":
-            print(f"No description provided for workload '{describe}'")
+            print(f"No description provided for workload '{describe}'.")
     
     # If no option has been specified, print the current workload and return as usual.  
     if not describe and not upload and not list:
         if current_workload:
-            print(f"The current workload is {current_workload}")
+            print(f"The current workload is {current_workload}.")
         else: 
-            print("The current workload is unspecified")
+            print("The current workload is unspecified.")
 
 
 # ---------------------------------------------------------------------------------------
