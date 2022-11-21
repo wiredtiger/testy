@@ -6,7 +6,6 @@ from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
-import logging 
 
 testy_config = ".testy"
 
@@ -163,9 +162,9 @@ def workload(c, upload=None, list=False, describe=None):
                 unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
                     warn=True)
                 if copy and unpack: 
-                    print(f"Upload succeeded for workload '{workload_name}' and ready for use.")
+                    print(f"Upload succeeded! Workload '{workload_name}' ready for use.")
                 else:
-                    print(f"Workload '{workload_name}' failed to copy and unpack.")
+                    print(f"Failed to add '{workload_name}'.")
                 c.sudo(f"rm -f {src} /tmp/{upload}")
 
     # Lists the available workloads in the workloads directory and highlights the current workload.
