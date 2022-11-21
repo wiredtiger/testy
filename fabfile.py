@@ -5,6 +5,7 @@ import re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
+from invocations.console import confirm
 
 testy_config = ".testy"
 
@@ -137,18 +138,30 @@ def workload(c, upload=None, list=False, describe=None):
     # the archive, including the archive name. After it is uploaded to the server, the archive gets
     # unpacked in the workloads directory. 
     if upload:
-        try: 
-            dest = get_value(c, "application", "workload_dir")
-            src = f"{dest}/{upload}"
-            script = get_value(c, "testy", "unpack_script")
+        dest = get_value(c, "application", "workload_dir")
+        src = f"{dest}/{upload}"
+        script = get_value(c, "testy", "unpack_script")
+        workload_name = c.run(f"basename {src} | cut -d. -f1", hide=True).stdout.strip()
+        exists = overwrite = False
 
-            c.put(upload, "/tmp", preserve_mode=True)
-            c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
-            c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
-
-        except Exception as e:
-            print(e)
-            print(f"Upload failed for workload {upload}")
+        if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True, hide=True):
+            exists = True
+            overwrite = confirm(f"Workload '{workload_name}' already exists, would you like to " \
+                + "overwrite it?", assume_yes=True)
+            if not overwrite:
+                print(f"Unable to upload workload {workload_name}. ")
+        
+        if exists == overwrite:
+            try: 
+                c.put(upload, "/tmp", preserve_mode=True)
+                c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
+                c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, warn=True)
+            except Exception as e:
+                print(e)
+                print(f"Upload failed for workload {workload_name}")
+            else:
+                print(f"Upload succeeded for workload {workload_name}")
+                c.sudo(f"rm {src}")
 
     # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
