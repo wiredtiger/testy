@@ -5,6 +5,7 @@ import re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
+from invocations.console import confirm
 
 testy_config = ".testy"
 
@@ -130,7 +131,7 @@ def start(c, workload):
 @task
 def workload(c, upload=None, list=False, describe=None):
     """ Upload, list, and describe workloads. 
-    Up three optional arguments can be taken at a time. If more than one option is specified at
+    Up to three optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
        2. list
@@ -139,15 +140,45 @@ def workload(c, upload=None, list=False, describe=None):
     continue running the following options.  
     """
     current_workload = get_value(c, "application", "current_workload")
+    user = get_value(c, "application", "user")
 
-    # TODO: Implement upload functionality.
+    # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
+    # the archive, including the archive name. After it is uploaded to the server, the archive gets
+    # unpacked in the workloads directory. 
     if upload:
-        print("Upload to be implemented") 
+        dest = get_value(c, "application", "workload_dir")
+        src = f"{dest}/{upload}"
+        workload_name = Path(src).stem.split('.')[0]
+        exists = overwrite = False
+
+        if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True):
+            exists = True
+            overwrite = confirm(f"Workload '{workload_name}' already exists. Would you like to " \
+                + "overwrite it?", assume_yes=False)
+            if not overwrite:
+                print(f"The workload '{workload_name}' has not been uploaded. ")
         
+        if exists == overwrite:
+            script = get_value(c, "testy", "unpack_script")
+            try: 
+                c.put(upload, "/tmp", preserve_mode=True)
+            except Exception as e:
+                print(e)
+                print(f"Upload failed for workload '{workload_name}'.")
+            else:
+                copy = c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
+                unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
+                    warn=True)
+                if copy and unpack: 
+                    print(f"Upload succeeded! Workload '{workload_name}' ready for use.")
+                else:
+                    print(f"Failed to add '{workload_name}'.")
+                c.sudo(f"rm -f {src} /tmp/{upload}")
+
     # Lists the available workloads in the workloads directory and highlights the current workload.
     if list:
         command = "ls " + get_value(c, "application", "workload_dir")
-        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True, hide=True)
+        result = c.sudo(command, user=user, warn=True, hide=True)
         if result.ok:
             print("\n\033[1mAvailable workloads: \033[0m")
             if current_workload:
@@ -162,18 +193,18 @@ def workload(c, upload=None, list=False, describe=None):
     if describe:
         wif = get_value(c, "application", "workload_dir") + f"/{describe}/{describe}.sh"
         command = wif + " describe"
-        result = c.sudo(command, user=get_value(c, "application", "user"), warn=True)
+        result = c.sudo(command, user=user, warn=True)
         if not result: 
-            print(f"Unable to describe '{describe}' workload")
+            print(f"Unable to describe '{describe}' workload.")
         elif result.stdout == "":
-            print(f"No description provided for workload '{describe}'")
+            print(f"No description provided for workload '{describe}'.")
     
     # If no option has been specified, print the current workload and return as usual.  
     if not describe and not upload and not list:
         if current_workload:
-            print(f"The current workload is {current_workload}")
+            print(f"The current workload is {current_workload}.")
         else: 
-            print("The current workload is unspecified")
+            print("The current workload is unspecified.")
 
 
 # ---------------------------------------------------------------------------------------
