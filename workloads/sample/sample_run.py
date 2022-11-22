@@ -62,13 +62,13 @@ def delete_table(connection, db_dir, threshold, target):
     global tables
     session = connection.open_session()
 
-    while delete_tables:
+    while drop_tables:
         sleep(1)
 
         while get_dir_size(db_dir) >= target:
 
             num_tables = len(tables)
-            if not delete_tables or num_tables == 0:
+            if not drop_tables or num_tables == 0:
                 break
 
             # Select a random table to delete.
@@ -97,29 +97,29 @@ table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
 create_tables = True
 
-thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
+create_thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
     table_config))
-threads.append(thread)
-thread.start()
+threads.append(create_thread)
+create_thread.start()
 
 # Delete tables when the database size is too big.
 kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
 
-delete_tables = True
+drop_tables = True
 threshold = 120 * gb
 target = 100 * gb
-delete_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home, threshold,
+drop_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home, threshold,
     target))
-threads.append(delete_thread)
-delete_thread.start()
+threads.append(drop_thread)
+drop_thread.start()
 
 # TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
 sleep(300)
 
 create_tables = False
-delete_tables = False
+drop_tables = False
 for x in threads:
     x.join()
 threads = []
