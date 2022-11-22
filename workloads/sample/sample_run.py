@@ -86,7 +86,7 @@ def delete_table(connection, db_dir, threshold, target):
 context = Context()
 connection = open_connection(context)
 
-tables = []
+tables = find_tables(context.args.home)
 threads = []
 
 # Create tables periodically.

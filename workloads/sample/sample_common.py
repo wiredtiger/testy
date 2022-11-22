@@ -38,6 +38,17 @@ def checkpoint(context, connection):
     checkpoint_workload.run(connection)
 
 
+# Find all existing but non internal WiredTiger tables in a database directory.
+def find_tables(dir):
+    ignored_files = ['workload.stat', 'WiredTiger.lock', 'WiredTiger', 'WiredTiger.basecfg',
+        'WiredTiger.wt', 'WiredTiger.turtle', 'WiredTigerHS.wt']
+    tables = []
+    with os.scandir(dir) as entries:
+        for entry in entries:
+            if entry.is_file() and entry.name not in ignored_files:
+                tables.append(Table(entry.name.replace(".wt", "")))
+    return tables
+
 def generate_random_string(length):
     assert length > 0
     characters = string.ascii_letters + string.digits
