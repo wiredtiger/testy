@@ -260,7 +260,7 @@ def git_clone(c, git_url, local_dir, branch):
         print(f"Directory '{local_dir}' exists. " \
               f"Repository '{repo}' will not be cloned.")
     else:
-        print(f"Cloning branch '{branch}' of '{repo}' repository")
+        print(f"Cloning branch '{branch}' of '{repo}' repository ...")
         if c.run(f"git clone --branch {branch} {git_url} {local_dir}", warn=True):
             print("Success!")
         else:
