@@ -102,7 +102,18 @@ thread = pythread.Thread(target=create_table, args=(connection, interval_sec, ta
 threads.append(thread)
 thread.start()
 
+# Delete tables when the database size is too big.
+kb = 1024
+mb = 1024 * kb
+gb = 1024 * mb
+
 delete_tables = True
+threshold = 120 * gb
+target = 100 * gb
+delete_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home, threshold,
+    target))
+threads.append(delete_thread)
+delete_thread.start()
 
 # TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
 sleep(300)
