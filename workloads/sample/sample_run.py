@@ -75,13 +75,13 @@ def delete_table(connection, db_dir, threshold, target):
             table_idx = random.randint(0, num_tables - 1)
             table_name = "table:" + tables[table_idx]._uri
 
+            # It is possible that the selected table cannot be dropped if it is already being used,
+            # simply retry.
             try:
                 session.drop(table_name)
                 del tables[table_idx]
             except Exception as e:
-                # TODO Test this case
-                print(str(e))
-                assert False
+                assert "resource busy" in str(e).lower()
 
 
 # Setup the WiredTiger connection.
