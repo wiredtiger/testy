@@ -49,6 +49,7 @@ def find_tables(dir):
                 tables.append(Table(entry.name.replace(".wt", "")))
     return tables
 
+
 def generate_random_string(length):
     assert length > 0
     characters = string.ascii_letters + string.digits
