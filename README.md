@@ -9,7 +9,7 @@ Running testy requires two machines: a local machine from which to run the `fab`
 
 - On your local machine, install the python packages needed to run Fabric commands:
   ```
-  python3 -m pip install fabric2 invocations
+  python3 -m pip install fabric invocations
   ```
 
 - Run the install command from your local machine:
