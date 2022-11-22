@@ -27,18 +27,10 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import os
 import random
-import string
 import threading as pythread
 from workgen import *
-
-
-def generate_random_string(length):
-    assert length > 0
-    characters = string.ascii_letters + string.digits
-    str = ''.join(random.choice(characters) for _ in range(length))
-    return str
+from sample_common import *
 
 
 def create_tables(connection, num_tables, name_length, table_config):
@@ -60,22 +52,10 @@ def create_tables(connection, num_tables, name_length, table_config):
             assert "file exists" in str(e).lower()
 
 
-def checkpoint(context, connection):
-    checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
-    thread = Thread(checkpoint_op)
-    checkpoint_workload = Workload(context, thread)
-    checkpoint_workload.run(connection)
-
 # Setup the WiredTiger connection.
-# MongoDB allocates the following memory for the WiredTiger cache size:
-# (total memory available - 1GB) / 2
-total_memory = int(os.popen("free -t -b").readlines()[-1].split()[1:][0])
-cache_size_gb = int(((total_memory - 1e9) / 2) / 1e9)
-
-connection_config = f"create,cache_size={cache_size_gb}GB"
-
 context = Context()
-connection = context.wiredtiger_open(connection_config)
+connection_config = "create"
+connection = open_connection(context, connection_config)
 
 # Create tables.
 num_threads = 10
