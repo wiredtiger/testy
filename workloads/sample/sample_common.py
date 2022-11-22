@@ -45,6 +45,18 @@ def generate_random_string(length):
     return str
 
 
+# Get the directory size in bytes excluding Workgen files.
+def get_dir_size(dir):
+
+    with os.scandir(dir) as entries:
+        total_size = 0
+        for entry in entries:
+            # Workgen generates a statistics file called "workload.stat" that needs to be ignored.
+            if entry.is_file() and entry.name not in "workload.stat":
+                total_size += entry.stat().st_size
+        return total_size
+
+
 # Return the total RAM in bytes.
 def get_total_os_memory():
     return int(os.popen("free -t -b").readlines()[-1].split()[1:][0])

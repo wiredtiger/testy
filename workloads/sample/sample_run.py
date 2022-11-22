@@ -52,11 +52,42 @@ def create_table(connection, interval_sec, name_length, table_config):
                 assert "file exists" in str(e).lower()
 
 
+# Delete random tables when the database size is not within range until the target is reached. The
+# threshold and the target are in bytes.
+def delete_table(connection, db_dir, threshold, target):
+    assert target <= threshold
+
+    global tables
+    session = connection.open_session()
+
+    while delete_tables:
+        sleep(1)
+
+        while get_dir_size(db_dir) >= target:
+
+            num_tables = len(tables)
+            if not delete_tables or num_tables == 0:
+                break
+
+            # Select a random table to delete.
+            table_idx = random.randint(0, num_tables - 1)
+            table_name = "table:" + tables[table_idx]._uri
+
+            try:
+                session.drop(table_name)
+                del tables[table_idx]
+            except Exception as e:
+                # TODO Test this case
+                print(str(e))
+                assert False
+
+
 # Setup the WiredTiger connection.
 context = Context()
 connection = open_connection(context)
 
-threads = list()
+tables = []
+threads = []
 
 # Create tables periodically.
 table_name_length = 4
@@ -69,10 +100,13 @@ thread = pythread.Thread(target=create_table, args=(connection, interval_sec, ta
 threads.append(thread)
 thread.start()
 
+delete_tables = True
+
 # TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
 sleep(300)
 
 create_tables = False
+delete_tables = False
 for x in threads:
     x.join()
 threads = []
