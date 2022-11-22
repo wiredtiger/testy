@@ -36,6 +36,7 @@ from sample_common import *
 def create_table(connection, interval_sec, name_length, table_config):
     assert name_length > 0
 
+    global tables
     session = connection.open_session()
 
     while create_tables:
@@ -47,6 +48,7 @@ def create_table(connection, interval_sec, name_length, table_config):
             table_name = "table:" + generate_random_string(name_length)
             try:
                 session.create(table_name, table_config)
+                tables.append(Table(table_name))
                 success = True
             except wiredtiger.WiredTigerError as e:
                 assert "file exists" in str(e).lower()
