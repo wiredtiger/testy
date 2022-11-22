@@ -32,7 +32,8 @@ from time import sleep
 from helper import *
 
 
-def create_op(connection, interval_sec, name_length, table_config):
+# Create a table periodically.
+def create_table(connection, interval_sec, name_length, table_config):
     assert name_length > 0
 
     session = connection.open_session()
@@ -63,7 +64,7 @@ table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
 create_tables = True
 
-thread = pythread.Thread(target=create_op, args=(connection, interval_sec, table_name_length,
+thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
     table_config))
 threads.append(thread)
 thread.start()
