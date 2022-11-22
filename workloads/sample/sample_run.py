@@ -29,7 +29,7 @@
 
 import threading as pythread
 from time import sleep
-from helper import *
+from sample_common import *
 
 
 # Create a table periodically.

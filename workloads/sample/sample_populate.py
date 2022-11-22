@@ -30,7 +30,7 @@
 import random
 import threading as pythread
 from workgen import *
-from helper import *
+from sample_common import *
 
 
 def create_tables(connection, num_tables, name_length, table_config):
