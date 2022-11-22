@@ -16,7 +16,7 @@ testy_config = ".testy"
 
 # Install the testy framework.
 @task
-def install(c, branch="develop"):
+def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
     # Read configuration file.
     config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
@@ -40,8 +40,8 @@ def install(c, branch="develop"):
     install_packages(c)
 
     # Clone repositories.
-    for repo in ["testy", "wiredtiger"]:
-       git_clone(c, config.get(repo, "git_url"), config.get(repo, "home_dir"))
+    for repo in [("testy", testy_branch), ("wiredtiger", wiredtiger_branch)]:
+       git_clone(c, config.get(repo[0], "git_url"), config.get(repo[0], "home_dir"), repo[1])
 
     # Create working files and directories that can be modified by the framework user.
     create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
@@ -51,7 +51,7 @@ def install(c, branch="develop"):
     # Build WiredTiger.
     wt_home_dir = config.get("wiredtiger", "home_dir")
     wt_build_dir = config.get("wiredtiger", "build_dir")
-    build_wiredtiger(c, wt_home_dir, wt_build_dir, branch)
+    build_wiredtiger(c, wt_home_dir, wt_build_dir, wiredtiger_branch)
 
     # Install services.
     # TODO: Update this part of the installation when the service implementation
@@ -292,16 +292,18 @@ def create_directory(c, dir):
         print("done!")
 
 # Clone git repository.
-def git_clone(c, git_url, local_dir):
+def git_clone(c, git_url, local_dir, branch):
 
     repo = Path(git_url).stem
     if c.run(f"test -d {local_dir}", warn=True):
         print(f"Directory '{local_dir}' exists. " \
               f"Repository '{repo}' will not be cloned.")
     else:
-        print(f"Cloning '{repo}' repository ... ", end='', flush=True)
-        c.run(f"git clone {git_url} {local_dir}", hide=True)
-        print("done!")
+        print(f"Cloning branch '{branch}' of '{repo}' repository ...")
+        if c.run(f"git clone --branch {branch} {git_url} {local_dir}", warn=True):
+            print("Success!")
+        else:
+            raise Exit()
 
 # Create a working copy of a file or directory on the remote machine that can
 # be modified by the specified user.
