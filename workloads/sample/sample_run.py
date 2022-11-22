@@ -58,7 +58,7 @@ connection = open_connection(context)
 
 threads = list()
 
-# Create collections periodically.
+# Create tables periodically.
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
