@@ -39,12 +39,12 @@ def create_table(connection, interval_sec, name_length, table_config):
     global tables
     session = connection.open_session()
 
-    while create_tables:
+    while is_running:
         success = False
         sleep(interval_sec)
 
         # It is possible to have a collision if the table has already been created, keep trying.
-        while not success:
+        while is_running and not success:
             table_name = "table:" + generate_random_string(name_length)
             try:
                 session.create(table_name, table_config)
@@ -62,13 +62,13 @@ def delete_table(connection, db_dir, threshold, target):
     global tables
     session = connection.open_session()
 
-    while drop_tables:
+    while is_running:
         sleep(1)
 
-        while get_dir_size(db_dir) >= target:
+        while is_running and get_dir_size(db_dir) >= target:
 
             num_tables = len(tables)
-            if not drop_tables or num_tables == 0:
+            if num_tables == 0:
                 break
 
             # Select a random table to delete.
@@ -87,6 +87,7 @@ def delete_table(connection, db_dir, threshold, target):
 # Setup the WiredTiger connection.
 context = Context()
 connection = open_connection(context)
+is_running = True
 
 tables = get_tables(context.args.home)
 threads = []
@@ -95,7 +96,6 @@ threads = []
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
-create_tables = True
 
 create_thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
     table_config))
@@ -107,7 +107,6 @@ kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
 
-drop_tables = True
 threshold = 120 * gb
 target = 100 * gb
 drop_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home, threshold,
@@ -118,8 +117,7 @@ drop_thread.start()
 # TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
 sleep(300)
 
-create_tables = False
-drop_tables = False
+is_running = False
 for x in threads:
     x.join()
 threads = []
