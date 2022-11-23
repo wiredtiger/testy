@@ -28,6 +28,7 @@
 #
 
 import os, random, string
+from pathlib import Path
 from workgen import *
 
 
@@ -39,14 +40,9 @@ def checkpoint(context, connection):
 
 
 # Find all existing but non internal WiredTiger tables in a database directory.
-def find_tables(dir):
-    ignored_files = ['workload.stat', 'WiredTiger.lock', 'WiredTiger', 'WiredTiger.basecfg',
-        'WiredTiger.wt', 'WiredTiger.turtle', 'WiredTigerHS.wt']
-    tables = []
-    with os.scandir(dir) as entries:
-        for entry in entries:
-            if entry.is_file() and entry.name not in ignored_files:
-                tables.append(Table(entry.name.replace(".wt", "")))
+def get_tables(dir):
+    path = Path(dir)
+    tables = [Table(f.stem) for f in path.glob("*.wt") if not f.name.startswith("WiredTiger")]
     return tables
 
 
