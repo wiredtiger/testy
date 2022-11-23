@@ -42,7 +42,7 @@ def checkpoint(context, connection):
 # Find all existing but non internal WiredTiger tables in a database directory.
 def get_tables(dir):
     path = Path(dir)
-    tables = [Table(f.stem) for f in path.glob("*.wt") if not f.name.startswith("WiredTiger")]
+    tables = [Table(f"table:{f.stem}") for f in path.glob("*.wt") if not f.name.startswith("WiredTiger")]
     return tables
 
 
