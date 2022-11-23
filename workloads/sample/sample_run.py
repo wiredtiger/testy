@@ -86,6 +86,7 @@ context = Context()
 connection = open_connection(context)
 is_running = True
 
+# Retrieve existing tables in the database directory.
 tables = get_tables(context.args.home)
 threads = []
 
