@@ -66,7 +66,7 @@ def delete_table(connection, db_dir, threshold, target):
         sleep(1)
 
         num_tables = len(tables)
-        while is_running and num_tables > 0 and get_dir_size(db_dir) >= target:
+        while is_running and num_tables > 0 and get_db_size(db_dir) >= target:
 
             # Select a random table to delete.
             table_idx = random.randint(0, num_tables - 1)

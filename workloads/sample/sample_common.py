@@ -53,16 +53,19 @@ def generate_random_string(length):
     return str
 
 
-# Get the directory size in bytes excluding Workgen files.
-def get_dir_size(dir):
+# Get the directory size in bytes taken by WiredTiger files.
+def get_db_size(dir):
 
-    with os.scandir(dir) as entries:
-        total_size = 0
-        for entry in entries:
-            # Workgen generates a statistics file called "workload.stat" that needs to be ignored.
-            if entry.is_file() and entry.name not in "workload.stat":
-                total_size += entry.stat().st_size
-        return total_size
+    path = Path(dir)
+
+    user_tables = [f for f in path.glob("*.wt") if not f.name.startswith("WiredTiger")]
+    internal_tables = [f for f in path.glob("WiredTiger.*")]
+    files = user_tables + internal_tables
+
+    total_size = 0
+    for file in files:
+        total_size += os.stat(file).st_size
+    return total_size
 
 
 # Return the total RAM in bytes.
