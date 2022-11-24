@@ -114,7 +114,7 @@ while current_db_size < target_db_size:
     # this is the case.
     pop_workload = Workload(context, thread)
     try:
-        pop_workload.run(connection)
+        assert pop_workload.run(connection) == 0
         current_db_size += (key_size + value_size)
     except Exception as e:
         assert "too large for" in str(e).lower()

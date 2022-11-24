@@ -36,7 +36,7 @@ def checkpoint(context, connection):
     checkpoint_op = Operation(Operation.OP_CHECKPOINT, "")
     thread = Thread(checkpoint_op)
     checkpoint_workload = Workload(context, thread)
-    checkpoint_workload.run(connection)
+    assert checkpoint_workload.run(connection) == 0
 
 
 # Find all existing but non internal WiredTiger tables in a database directory.
