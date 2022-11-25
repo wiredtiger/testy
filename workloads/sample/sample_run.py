@@ -28,9 +28,16 @@
 #
 
 import threading as pythread
+import signal
 from time import sleep
 from sample_common import *
 
+signal_exit = False
+
+def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    global signal_exit 
+    signal_exit= True
 
 # Create a table periodically.
 def create_table(connection, interval_sec, name_length, table_config):
@@ -38,12 +45,12 @@ def create_table(connection, interval_sec, name_length, table_config):
 
     session = connection.open_session()
 
-    while create_tables:
+    while not signal_exit:
         success = False
         sleep(interval_sec)
 
         # It is possible to have a collision if the table has already been created, keep trying.
-        while not success:
+        while not signal_exit and not success:
             table_name = "table:" + generate_random_string(name_length)
             try:
                 session.create(table_name, table_config)
@@ -79,3 +86,10 @@ threads = []
 
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
+connection.close()
+
+if signal_exit:
+    print("Run stopped.")
+else:
+    print("Run has complete.")
+
