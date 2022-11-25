@@ -90,7 +90,7 @@ def populate(c, workload):
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     if not c.run(f"test -f {wif}", warn=True):
-        raise Exit(f"\nUnable to run populate: Workload {workload} not found.")
+        raise Exit(f"\nUnable to run populate: Workload '{workload}' not found.")
 
     # Run the populate workload.
     command = get_env(c, "environment") + " bash " + wif + " populate"
@@ -122,7 +122,7 @@ def start(c, workload):
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     if not c.run(f"test -f {wif}", warn=True):
-        raise Exit(f"\nUnable to start {testy}: Workload {workload} not found.")
+        raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # First start the testy-run service which controls the long-running workload.
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
