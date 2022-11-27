@@ -439,12 +439,13 @@ def update_wiredtiger(c, branch):
 
     # Get current branch.
     wt_home_dir = get_value(c, "wiredtiger", "home_dir")
+    old_branch = None
     with c.cd(wt_home_dir):
         result = c.run("git branch --show-current")
         if not result.stdout:
             print(f"Error: {wiredtiger} is not currently on a branch.")
             return False
-    old_branch = result.stdout.strip()
+        old_branch = result.stdout.strip()
 
     # Check out branch from GitHub.
     if not git_checkout(c, wt_home_dir, branch):
