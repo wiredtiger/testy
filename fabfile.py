@@ -125,7 +125,7 @@ def start(c, workload):
     # testy-run service).
     # TODO: Update the start function when the service implementations are complete
 
-# Update the wiredtiger and/or testy source on the remote server to the specified github
+# Update the WiredTiger and/or testy source on the remote server to the specified GitHub
 # branch. If an argument is not specified, no update is made. Updates to WiredTiger are
 # performed in line with the WiredTiger documentation for upgrading and downgrading databases,
 # as specified here: https://source.wiredtiger.com/develop/upgrade.html.
@@ -329,7 +329,7 @@ def git_clone(c, git_url, local_dir, branch):
         else:
             raise Exit()
 
-# Check out the specified branch from github.
+# Check out the specified branch from GitHub.
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
@@ -446,7 +446,7 @@ def update_wiredtiger(c, branch):
             return False
     old_branch = result.stdout.strip()
 
-    # Check out branch from github.
+    # Check out branch from GitHub.
     if not git_checkout(c, wt_home_dir, branch):
         print(f"Failed to update {wiredtiger} to branch '{branch}'.")
         return False
@@ -472,7 +472,7 @@ def update_wiredtiger(c, branch):
 # framework, and update the available workloads.
 def update_testy(c, branch):
 
-    # Check out branch from github.
+    # Check out branch from GitHub.
     testy_git_dir = get_value(c, "testy", "home_dir")
     if not git_checkout(c, testy_git_dir, branch):
         print(f"Failed to update {testy} to branch '{branch}'.")
