@@ -126,6 +126,19 @@ def start(c, workload):
     # testy-run service).
     # TODO: Update the start function when the service implementations are complete
 
+# Stops the current running workload gracefully.
+@task
+def stop(c):
+    current_workload = get_value(c, "application", "current_workload")
+    if not current_workload:
+        raise Exit("There is no currrent running workload top stop.")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+    service = f"$(systemd-escape --template {service_name} \"{current_workload}\")"
+    if c.sudo(f"systemctl stop {service}", user="root"):
+        print(f"'{current_workload}' has been stopped.")
+    else:
+        print(f"Failed to stop workload '{current_workload}'.")
+
 # The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
 # provided, the current workload is returned.
 @task
