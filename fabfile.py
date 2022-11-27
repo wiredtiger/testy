@@ -358,7 +358,7 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
     with c.cd(home_dir):
         try:
             c.run("git pull")
-            c.run("rm -rf build && mkdir build")
+            c.run(f"rm -rf {build_dir} && mkdir {build_dir}")
         except:
             return False
 
