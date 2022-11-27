@@ -38,7 +38,7 @@ signal_exit = False
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
     global signal_exit 
-    signal_exit= True
+    signal_exit = True
 
 signal.signal(signal.SIGTERM, signal_handler)
 
@@ -59,6 +59,7 @@ def create_tables(connection, num_tables, name_length, table_config):
             i += 1
         except wiredtiger.WiredTigerError as e:
             assert "file exists" in str(e).lower()
+
 
 # Setup the WiredTiger connection.
 context = Context()
@@ -88,8 +89,7 @@ for x in threads:
     x.join()
 threads = []
 
-total_tables = i * tables_per_thread
-print(f"{total_tables} tables created.", flush=True)
+print(f"{num_tables} tables created.", flush=True)
  
 # Insert random key/value pairs in all tables until it reaches the size limit.
 kb = 1024
@@ -138,9 +138,9 @@ while current_db_size < target_db_size and not signal_exit:
 if signal_exit:
     print("Populate stopped.")
 else:
-    # Finish with a checkpoint to make all data durable.
     print("", end="\rPopulating the database ... Done.")
 
+# Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
 connection.close()
 print(f"\nDatabase populated with {current_db_size / 1e9} GB of data.")
