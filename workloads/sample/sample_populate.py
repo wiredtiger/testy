@@ -141,9 +141,7 @@ while current_db_size < target_db_size and not signal_exit:
         print("", end=f"\rPopulating the database ... {progress_pct}%", flush=True)
         progress_pct += 1
 
-if signal_exit:
-    print(" Populate stopped.")
-else:
+if not signal_exit:
     print("", end="\rPopulating the database ... Done.")
 
 # Finish with a checkpoint to make all data durable.

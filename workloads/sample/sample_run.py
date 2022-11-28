@@ -98,5 +98,5 @@ while True:
         checkpoint(context, connection)
         connection.close()
 
-        print("Run stopped.")
+        print(f"{__file__} exited.")
         break
