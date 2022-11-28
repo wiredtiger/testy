@@ -27,10 +27,20 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+import os
 import random
+import signal
 import threading as pythread
 from workgen import *
 from sample_common import *
+
+
+def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    print(f"{__file__} received signal {signame}.")
+    assert signal.Signals(signum) == signal.SIGTERM
+    global thread_exit
+    thread_exit.set()
 
 
 def create_tables(connection, num_tables, name_length, table_config):
@@ -40,7 +50,7 @@ def create_tables(connection, num_tables, name_length, table_config):
     session = connection.open_session()
     i = 0
 
-    while i < num_tables:
+    while i < num_tables and not thread_exit.is_set():
         table_name = "table:" + generate_random_string(name_length)
         # It is possible to have a collision if the table has already been created, simply retry.
         try:
@@ -51,6 +61,9 @@ def create_tables(connection, num_tables, name_length, table_config):
         except wiredtiger.WiredTigerError as e:
             assert "file exists" in str(e).lower()
 
+
+thread_exit = pythread.Event()
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Setup the WiredTiger connection.
 context = Context()
@@ -66,21 +79,24 @@ tables = []
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 
-threads = list()
+threads = []
 print(f"Creating {num_tables} tables ...", end='', flush=True)
-for i in range(0, num_threads):
+i = 0
+while i < num_threads and not thread_exit.is_set():
     thread = pythread.Thread(target=create_tables, args=(connection, tables_per_thread,
         table_name_length, table_config))
     threads.append(thread)
     thread.start()
+    i += 1
 
-for x in threads:
-    x.join()
+for thread in threads:
+    thread.join()
 threads = []
 
-print(" Done.", flush=True)
-assert len(tables) == num_tables
-
+print(f" {i} tables created.", flush=True)
+if not thread_exit.is_set():
+    assert len(tables) == num_tables
+ 
 # Insert random key/value pairs in all tables until it reaches the size limit.
 kb = 1024
 mb = 1024 * kb
@@ -93,8 +109,10 @@ current_db_size = 0
 target_db_size = 100 * gb
 progress_pct = 0
 
-print('', end="\rPopulating the database ...", flush=True)
-while current_db_size < target_db_size:
+if not thread_exit.is_set():
+    print("", end=f"\rPopulating the database ... {progress_pct}%", flush=True)
+
+while current_db_size < target_db_size and not thread_exit.is_set():
 
     # Select a random table.
     table_idx = random.randint(0, num_tables - 1)
@@ -124,8 +142,10 @@ while current_db_size < target_db_size:
         print("", end=f"\rPopulating the database ... {progress_pct}%", flush=True)
         progress_pct += 1
 
+if not thread_exit.is_set():
+    print("", end="\rPopulating the database ... Done.")
+
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
-
-print("", end="\rPopulating the database ... Done.")
-print(f"\nDatabase size: {current_db_size / 1e9} GB")
+connection.close()
+print(f"\nDatabase populated with {current_db_size / 1e9} GB of data.")
