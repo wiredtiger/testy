@@ -54,7 +54,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     wt_home_dir = config.get("wiredtiger", "home_dir")
     wt_build_dir = config.get("wiredtiger", "build_dir")
     if not build_wiredtiger(c, wt_home_dir, wt_build_dir, wiredtiger_branch):
-        raise Exit(f"Failed to build {wiredtiger} for branch {wiredtiger_branch}.")
+        raise Exit(f"Failed to build {wiredtiger} for branch '{wiredtiger_branch}'.")
 
     # Install services.
     # TODO: Update this part of the installation when the service implementation
@@ -182,9 +182,11 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
 
     # Do the updates.
     if testy_branch and not update_testy(c, testy_branch):
-        raise Exit(f"\nUpdate failed. Run 'fab start' to restart {testy}.")
+        raise Exit(f"\nUpdate failed for branch '{testy_branch}'. " \
+                    "Run 'fab start' to restart {testy}.")
     if wiredtiger_branch and not update_wiredtiger(c, wiredtiger_branch):
-        raise Exit(f"\nUpdate failed. Run 'fab start' to restart {testy}.")
+        raise Exit(f"\nUpdate failed for branch '{wiredtiger_branch}'. " \
+                    "Run 'fab start' to restart {testy}.")
 
     # Start testy service.
     start(c, workload)
