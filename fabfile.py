@@ -146,7 +146,6 @@ def stop(c):
     # TODO: Update this function as necessary when the backup and crash trigger
     # services are implemented.
 
-    testy = "\033[1;36mtesty\033[0m"
     workload = get_value(c, "application", "current_workload")
     if not workload:
         raise Exit(f"\nUnable to stop {testy}: No workload is defined.")
