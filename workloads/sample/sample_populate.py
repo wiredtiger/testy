@@ -36,7 +36,7 @@ from sample_common import *
 signal_exit = False
 
 def signal_handler(signum, frame):
-    signame = signal.Signals(signum).name
+    assert signal.Signals(signum) == signal.SIGTERM
     global signal_exit 
     signal_exit = True
 
@@ -75,7 +75,7 @@ tables = []
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 
-threads = list()
+threads = []
 print(f"Creating {num_tables} tables ...", end='', flush=True)
 i = 0
 while i < num_threads and not signal_exit:
@@ -90,6 +90,8 @@ for x in threads:
 threads = []
 
 print(f"{num_tables} tables created.", flush=True)
+if not signal_exit:
+    assert len(tables) == num_tables
  
 # Insert random key/value pairs in all tables until it reaches the size limit.
 kb = 1024
