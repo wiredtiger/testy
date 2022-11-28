@@ -78,8 +78,8 @@ create_thread = pythread.Thread(target=create, args=(connection, create_interval
 threads.append(create_thread)
 create_thread.start()
 
-for x in threads:
-    x.join()
+for thread in threads:
+    thread.join()
 threads = []
 
 # Finish with a checkpoint to make all data durable.

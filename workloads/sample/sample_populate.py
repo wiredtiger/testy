@@ -89,8 +89,8 @@ while i < num_threads and not thread_exit.is_set():
     thread.start()
     i += 1
 
-for x in threads:
-    x.join()
+for thread in threads:
+    thread.join()
 threads = []
 
 print(f" {i} tables created.", flush=True)
