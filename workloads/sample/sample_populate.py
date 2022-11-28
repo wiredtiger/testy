@@ -40,7 +40,6 @@ def signal_handler(signum, frame):
     global signal_exit 
     signal_exit = True
 
-signal.signal(signal.SIGTERM, signal_handler)
 
 def create_tables(connection, num_tables, name_length, table_config):
     assert name_length > 0
@@ -60,6 +59,8 @@ def create_tables(connection, num_tables, name_length, table_config):
         except wiredtiger.WiredTigerError as e:
             assert "file exists" in str(e).lower()
 
+
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Setup the WiredTiger connection.
 context = Context()
