@@ -35,9 +35,10 @@ from sample_common import *
 signal_exit = False
 
 def signal_handler(signum, frame):
-    signame = signal.Signals(signum).name
+    assert signal.Signals(signum) == signal.SIGTERM
     global signal_exit 
     signal_exit= True
+
 
 # Create a table periodically.
 def create_table(connection, interval_sec, name_length, table_config):
@@ -58,6 +59,8 @@ def create_table(connection, interval_sec, name_length, table_config):
             except wiredtiger.WiredTigerError as e:
                 assert "file exists" in str(e).lower()
 
+
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Setup the WiredTiger connection.
 context = Context()
