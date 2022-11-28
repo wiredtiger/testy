@@ -33,15 +33,13 @@ import signal
 from time import sleep
 from sample_common import *
 
-signal_exit = False
-
 
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
     print(f"{os.path.basename(__file__)} received signal {signame}.")
     assert signal.Signals(signum) == signal.SIGTERM
-    global signal_exit 
-    signal_exit = True
+    global thread_exit
+    thread_exit.set()
 
 
 # Create a table periodically.
@@ -50,20 +48,18 @@ def create_table(connection, interval_sec, name_length, table_config):
 
     session = connection.open_session()
 
-    while create_tables:
-        success = False
-        sleep(interval_sec)
-
-        # It is possible to have a collision if the table has already been created, keep trying.
-        while create_tables and not success:
-            table_name = "table:" + generate_random_string(name_length)
-            try:
-                session.create(table_name, table_config)
-                success = True
-            except wiredtiger.WiredTigerError as e:
-                assert "file exists" in str(e).lower()
+    while not thread_exit.is_set():
+        # It is possible to have a collision if the table has already been created but it should be
+        # rare.
+        table_name = "table:" + generate_random_string(name_length)
+        try:
+            session.create(table_name, table_config)
+        except wiredtiger.WiredTigerError as e:
+            assert "file exists" in str(e).lower()
+        thread_exit.wait(interval_sec)
 
 
+thread_exit = pythread.Event()
 signal.signal(signal.SIGTERM, signal_handler)
 
 # Setup the WiredTiger connection.
@@ -76,20 +72,18 @@ threads = list()
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
-create_tables = True
 
-thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
-    table_config))
-threads.append(thread)
-thread.start()
+create_thread = pythread.Thread(target=create_table, args=(connection, interval_sec,
+    table_name_length, table_config))
+threads.append(create_thread)
+create_thread.start()
 
 while True:
     # Check periodically for the signal to stop the workload.
     sleep(1)
 
-    if signal_exit:
+    if thread_exit.is_set():
 
-        create_tables = False
         for x in threads:
             x.join()
         threads = []
