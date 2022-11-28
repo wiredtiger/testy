@@ -175,6 +175,7 @@ def workload(c, upload=None, list=False, describe=None):
             try: 
                 c.put(upload, "/tmp", preserve_mode=True)
             except Exception as e:
+                print(e)
                 print(f"Upload failed for workload '{workload_name}'.")
             else:
                 copy = c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
