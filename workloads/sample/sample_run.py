@@ -50,12 +50,12 @@ def create_table(connection, interval_sec, name_length, table_config):
 
     session = connection.open_session()
 
-    while create_tables and not signal_exit:
+    while create_tables:
         success = False
         sleep(interval_sec)
 
         # It is possible to have a collision if the table has already been created, keep trying.
-        while create_tables and not signal_exit and not success:
+        while create_tables and not success:
             table_name = "table:" + generate_random_string(name_length)
             try:
                 session.create(table_name, table_config)
