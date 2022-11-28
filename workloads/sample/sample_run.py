@@ -80,9 +80,7 @@ threads.append(thread)
 thread.start()
 
 # TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
-workload_duration = 300
-print(f"Running for {workload_duration} seconds.")
-sleep(workload_duration)
+sleep(300)
 
 create_tables = False
 for x in threads:
