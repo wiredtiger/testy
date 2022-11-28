@@ -138,6 +138,30 @@ def start(c, workload):
     # testy-run service).
     # TODO: Update the start function when the service implementations are complete
 
+# Stop the testy framework, ensuring that all running processes complete gracefully
+# and WiredTiger is shut down cleanly.
+@task
+def stop(c):
+
+    # TODO: Update this function as necessary when the backup and crash trigger
+    # services are implemented.
+
+    workload = get_value(c, "application", "current_workload")
+    if not workload:
+        raise Exit(f"\nUnable to stop {testy}: No workload is defined.")
+
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+
+    if c.run(f"systemctl is-active {service}", hide=True, warn=True):
+        print(f"Stopping {testy}. Please wait ...")
+        if c.sudo(f"systemctl stop {service}", user="root"):
+            print(f"{testy} stopped successfully.")
+        else:
+            raise Exit(f"Failed to stop {testy}.")
+    else:
+        raise Exit(f"{testy} is not running.")
+
 # The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
 # provided, the current workload is returned.
 @task
