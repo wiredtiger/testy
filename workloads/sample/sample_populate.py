@@ -37,7 +37,7 @@ from sample_common import *
 
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
-    print(f"{os.path.basename(__file__)} received signal {signame}.")
+    print(f"{__file__} received signal {signame}.")
     assert signal.Signals(signum) == signal.SIGTERM
     global thread_exit
     thread_exit.set()
