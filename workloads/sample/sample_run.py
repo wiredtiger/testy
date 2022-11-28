@@ -43,7 +43,7 @@ def signal_handler(signum, frame):
 
 
 # Create a table periodically.
-def create_table(connection, interval_sec, name_length, table_config):
+def create(connection, interval_sec, name_length, table_config):
     assert name_length > 0
 
     session = connection.open_session()
@@ -73,8 +73,8 @@ table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
 interval_sec = 60
 
-create_thread = pythread.Thread(target=create_table, args=(connection, interval_sec,
-    table_name_length, table_config))
+create_thread = pythread.Thread(target=create, args=(connection, interval_sec, table_name_length,
+    table_config))
 threads.append(create_thread)
 create_thread.start()
 
