@@ -78,19 +78,12 @@ create_thread = pythread.Thread(target=create, args=(connection, create_interval
 threads.append(create_thread)
 create_thread.start()
 
-while True:
-    # Check periodically for the signal to stop the workload.
-    sleep(1)
+for x in threads:
+    x.join()
+threads = []
 
-    if thread_exit.is_set():
+# Finish with a checkpoint to make all data durable.
+checkpoint(context, connection)
+connection.close()
 
-        for x in threads:
-            x.join()
-        threads = []
-
-        # Finish with a checkpoint to make all data durable.
-        checkpoint(context, connection)
-        connection.close()
-
-        print(f"{__file__} exited.")
-        break
+print(f"{__file__} exited.")
