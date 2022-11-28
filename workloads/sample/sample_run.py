@@ -27,33 +27,42 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+import os
 import threading as pythread
+import signal
 from time import sleep
 from sample_common import *
 
 
+def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    print(f"{__file__} received signal {signame}.")
+    assert signal.Signals(signum) == signal.SIGTERM
+    global thread_exit
+    thread_exit.set()
+
+
 # Create a table periodically.
-def create_table(connection, interval_sec, name_length, table_config):
+def create(connection, interval_sec, name_length, table_config):
     assert name_length > 0
 
     global tables
     session = connection.open_session()
 
-    while is_running:
-        success = False
-        sleep(interval_sec)
+    while not thread_exit.is_set():
+        # It is possible to have a collision if the table has already been created but it should be
+        # rare.
+        table_name = "table:" + generate_random_string(name_length)
+        try:
+            session.create(table_name, table_config)
+            tables.append(Table(table_name))
+        except wiredtiger.WiredTigerError as e:
+            assert "file exists" in str(e).lower()
+        thread_exit.wait(interval_sec)
 
-        # It is possible to have a collision if the table has already been created, keep trying
-        # unless the thread is requested to stop.
-        while is_running and not success:
-            table_name = "table:" + generate_random_string(name_length)
-            try:
-                session.create(table_name, table_config)
-                tables.append(Table(table_name))
-                success = True
-            except wiredtiger.WiredTigerError as e:
-                assert "file exists" in str(e).lower()
 
+thread_exit = pythread.Event()
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Delete random tables when the database size is not within range until the target is reached. The
 # threshold and the target are in bytes.
@@ -94,10 +103,10 @@ threads = []
 # Create tables periodically.
 table_name_length = 4
 table_config = "key_format=S,value_format=S,exclusive"
-interval_sec = 60
+create_interval_sec = 60
 
-create_thread = pythread.Thread(target=create_table, args=(connection, interval_sec, table_name_length,
-    table_config))
+create_thread = pythread.Thread(target=create, args=(connection, create_interval_sec,
+    table_name_length, table_config))
 threads.append(create_thread)
 create_thread.start()
 
@@ -106,20 +115,19 @@ kb = 1024
 mb = 1024 * kb
 gb = 1024 * mb
 
-threshold = 120 * gb
-target = 100 * gb
-drop_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home, threshold,
-    target))
+drop_threshold = 120 * gb
+drop_target = 100 * gb
+drop_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home,
+    drop_threshold, drop_target))
 threads.append(drop_thread)
 drop_thread.start()
 
-# TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
-sleep(300)
-
-is_running = False
-for x in threads:
-    x.join()
+for thread in threads:
+    thread.join()
 threads = []
 
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
+connection.close()
+
+print(f"{__file__} exited.")
