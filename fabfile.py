@@ -54,7 +54,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     wt_home_dir = config.get("wiredtiger", "home_dir")
     wt_build_dir = config.get("wiredtiger", "build_dir")
     if not build_wiredtiger(c, wt_home_dir, wt_build_dir, wiredtiger_branch):
-        raise Exit(f"Failed to build {wiredtiger}.")
+        raise Exit(f"Failed to build {wiredtiger} for branch {wiredtiger_branch}.")
 
     # Install services.
     # TODO: Update this part of the installation when the service implementation
