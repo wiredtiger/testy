@@ -66,17 +66,17 @@ signal.signal(signal.SIGTERM, signal_handler)
 
 # Delete random tables when the database size is not within range until the target is reached. The
 # threshold and the target are in bytes.
-def delete_table(connection, db_dir, threshold, target):
+def delete(connection, db_dir, threshold, target):
     assert target <= threshold
 
     global tables
     session = connection.open_session()
 
-    while is_running:
+    while not thread_exit.is_set():
         sleep(1)
 
         num_tables = len(tables)
-        while is_running and num_tables > 0 and get_db_size(db_dir) >= target:
+        while not thread_exit.is_set() and num_tables > 0 and get_db_size(db_dir) >= target:
 
             # Select a random table to delete.
             table_idx = random.randint(0, num_tables - 1)
@@ -94,7 +94,6 @@ def delete_table(connection, db_dir, threshold, target):
 # Setup the WiredTiger connection.
 context = Context()
 connection = open_connection(context)
-is_running = True
 
 # Retrieve existing tables in the database directory.
 tables = get_tables(context.args.home)
@@ -117,7 +116,7 @@ gb = 1024 * mb
 
 drop_threshold = 120 * gb
 drop_target = 100 * gb
-drop_thread = pythread.Thread(target=delete_table, args=(connection, context.args.home,
+drop_thread = pythread.Thread(target=delete, args=(connection, context.args.home,
     drop_threshold, drop_target))
 threads.append(drop_thread)
 drop_thread.start()
