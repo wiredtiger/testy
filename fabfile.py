@@ -80,12 +80,21 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 @task
 def populate(c, workload):
 
-    # TODO: Can populate be executed if testy is already running?
-    service = get_testy_service_name(c)
-    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-        raise Exit(f"\nThe populate command cannot be executed when {testy} is running.")
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
 
+    # Is testy running already?
+    if current_workload:
+        service = f"$(systemd-escape --template {service_name} \"{current_workload}\")"
+        if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+            raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
+
+    # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
+    if not c.run(f"test -f {wif}", warn=True):
+        raise Exit(f"\nUnable to run populate: Workload '{workload}' not found.")
+
+    # Run the populate workload.
     command = get_env(c, "environment") + " bash " + wif + " populate"
 
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
@@ -102,21 +111,27 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+
     # Is testy running already?
-    service = get_testy_service_name(c)
-    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-        c.sudo(f"systemctl status {service}")
-        raise Exit(f"\n{testy} is already running. Use 'fab restart' to change the workload.")
+    if current_workload:
+        service = f"$(systemd-escape --template {service_name} \"{current_workload}\")"
+        if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+            raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
+                        "change the workload.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     if not c.run(f"test -f {wif}", warn=True):
-        raise Exit(f"\nUnable to start {testy}: Workload {workload} not found.")
+        raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # First start the testy-run service which controls the long-running workload.
-    c.sudo(f"systemctl start {service} && systemctl status {service}", user="root")
+    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+    c.sudo(f"systemctl start {service}", user="root")
     if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
         set_value(c, "application", "current_workload", workload)
+        c.run(f"systemctl status {service}")
         print(f"\nStarted {testy} running workload '{workload}'!")
     else:
         raise Exit("\nUnable to start {testy}.")
@@ -487,11 +502,3 @@ def update_testy(c, branch):
 
     print("Successfully updated {testy} to branch '{branch}'.")
     return True
-
-# Get the testy service name of the current workload.
-def get_testy_service_name(c):
-
-    service_path = get_value(c, "testy", "testy_service")
-    service_name = Path(service_path).name
-    workload = get_value(c, "application", "current_workload")
-    return f"$(systemd-escape --template {service_name} \"{workload}\")"
