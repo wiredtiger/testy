@@ -89,7 +89,7 @@ for x in threads:
     x.join()
 threads = []
 
-print(f"{num_tables} tables created.", flush=True)
+print(f" {i} tables created.", flush=True)
 if not signal_exit:
     assert len(tables) == num_tables
  
@@ -138,7 +138,7 @@ while current_db_size < target_db_size and not signal_exit:
         progress_pct += 1
 
 if signal_exit:
-    print("Populate stopped.")
+    print(" Populate stopped.")
 else:
     print("", end="\rPopulating the database ... Done.")
 
