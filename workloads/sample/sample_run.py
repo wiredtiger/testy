@@ -79,20 +79,20 @@ thread = pythread.Thread(target=create_table, args=(connection, interval_sec, ta
 threads.append(thread)
 thread.start()
 
-# TODO: Make sure to stop all threads when the workload stops. For now, sleep for some time.
-sleep(300)
+while True:
+    # Check periodically for the signal to stop the workload.
+    sleep(1)
 
-create_tables = False
-for x in threads:
-    x.join()
-threads = []
+    if signal_exit:
 
-# Finish with a checkpoint to make all data durable.
-checkpoint(context, connection)
-connection.close()
+        create_tables = False
+        for x in threads:
+            x.join()
+        threads = []
 
-if signal_exit:
-    print("Run stopped.")
-else:
-    print("Run has complete.")
+        # Finish with a checkpoint to make all data durable.
+        checkpoint(context, connection)
+        connection.close()
 
+        print("Run stopped.")
+        break
