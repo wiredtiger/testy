@@ -34,14 +34,13 @@ import threading as pythread
 from workgen import *
 from sample_common import *
 
-signal_exit = False
 
 def signal_handler(signum, frame):
     signame = signal.Signals(signum).name
     print(f"{os.path.basename(__file__)} received signal {signame}.")
     assert signal.Signals(signum) == signal.SIGTERM
-    global signal_exit 
-    signal_exit = True
+    global thread_exit
+    thread_exit.set()
 
 
 def create_tables(connection, num_tables, name_length, table_config):
@@ -51,7 +50,7 @@ def create_tables(connection, num_tables, name_length, table_config):
     session = connection.open_session()
     i = 0
 
-    while i < num_tables and not signal_exit:
+    while i < num_tables and not thread_exit.is_set():
         table_name = "table:" + generate_random_string(name_length)
         # It is possible to have a collision if the table has already been created, simply retry.
         try:
@@ -63,6 +62,7 @@ def create_tables(connection, num_tables, name_length, table_config):
             assert "file exists" in str(e).lower()
 
 
+thread_exit = pythread.Event()
 signal.signal(signal.SIGTERM, signal_handler)
 
 # Setup the WiredTiger connection.
@@ -82,7 +82,7 @@ table_config = "key_format=S,value_format=S,exclusive"
 threads = []
 print(f"Creating {num_tables} tables ...", end='', flush=True)
 i = 0
-while i < num_threads and not signal_exit:
+while i < num_threads and not thread_exit.is_set():
     thread = pythread.Thread(target=create_tables, args=(connection, tables_per_thread,
         table_name_length, table_config))
     threads.append(thread)
@@ -94,7 +94,7 @@ for x in threads:
 threads = []
 
 print(f" {i} tables created.", flush=True)
-if not signal_exit:
+if not thread_exit.is_set():
     assert len(tables) == num_tables
  
 # Insert random key/value pairs in all tables until it reaches the size limit.
@@ -109,9 +109,10 @@ current_db_size = 0
 target_db_size = 100 * gb
 progress_pct = 0
 
-print('', end="\rPopulating the database ...", flush=True)
+if not thread_exit.is_set():
+    print("", end=f"\rPopulating the database ... {progress_pct}%", flush=True)
 
-while current_db_size < target_db_size and not signal_exit:
+while current_db_size < target_db_size and not thread_exit.is_set():
 
     # Select a random table.
     table_idx = random.randint(0, num_tables - 1)
@@ -141,7 +142,7 @@ while current_db_size < target_db_size and not signal_exit:
         print("", end=f"\rPopulating the database ... {progress_pct}%", flush=True)
         progress_pct += 1
 
-if not signal_exit:
+if not thread_exit.is_set():
     print("", end="\rPopulating the database ... Done.")
 
 # Finish with a checkpoint to make all data durable.
