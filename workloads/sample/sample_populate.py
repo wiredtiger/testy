@@ -27,6 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+import os
 import random
 import signal
 import threading as pythread
@@ -36,6 +37,8 @@ from sample_common import *
 signal_exit = False
 
 def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    print(f"{os.path.basename(__file__)} received signal {signame}.")
     assert signal.Signals(signum) == signal.SIGTERM
     global signal_exit 
     signal_exit = True

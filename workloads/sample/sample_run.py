@@ -27,6 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
+import os
 import threading as pythread
 import signal
 from time import sleep
@@ -34,10 +35,13 @@ from sample_common import *
 
 signal_exit = False
 
+
 def signal_handler(signum, frame):
+    signame = signal.Signals(signum).name
+    print(f"{os.path.basename(__file__)} received signal {signame}.")
     assert signal.Signals(signum) == signal.SIGTERM
     global signal_exit 
-    signal_exit= True
+    signal_exit = True
 
 
 # Create a table periodically.
