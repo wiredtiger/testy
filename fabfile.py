@@ -150,7 +150,7 @@ def stop(c):
 
     workload = get_value(c, "application", "current_workload")
     if not workload:
-        print(f"\nUnable to stop {testy}: No workload is defined.")
+        raise Exit(f"\nUnable to stop {testy}: No workload is defined.")
 
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
