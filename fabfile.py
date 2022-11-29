@@ -410,7 +410,7 @@ def create_working_copy(c, src, dest, user=None):
         c.sudo(f"chown -R {user}:{user} {dest_name}")
 
 # Build WiredTiger for the specified branch. The function returns True if the WiredTiger
-# configuration and build succeed and false if any of the steps fail. An error message is
+# configuration and build succeed and False if any of the steps fail. An error message is
 # printed to stderr if the command executed by the Fabric run function returns a non-zero
 # status.
 def build_wiredtiger(c, home_dir, build_dir, branch):
