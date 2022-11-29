@@ -514,15 +514,15 @@ def update_wiredtiger(c, branch):
     wt_build_dir = get_value(c, "wiredtiger", "build_dir")
     if not build_wiredtiger(c, wt_home_dir, wt_build_dir, branch):
         print(f"Failed to build {wiredtiger} for branch '{branch}'.")
-        # Try restoring to previous state.
+        # Try restoring to previous branch.
         print(f"\nAttempting to restore branch '{old_branch}' ...")
         if git_checkout(c, wt_home_dir, old_branch) and \
            build_wiredtiger(c, wt_home_dir, wt_build_dir, old_branch):
             print(f"Restored {wiredtiger} to branch '{branch}'.")
         else:
-            raise Exit(f"\nFailed to restore {wiredtiger} to previous state.")
-
-    print(f"\nSuccessfully updated {wiredtiger} to branch '{branch}'.\n")
+            raise Exit(f"\nFailed to restore {wiredtiger} to previous branch '{old_branch}'.")
+    else:
+        print(f"\nSuccessfully updated {wiredtiger} to branch '{branch}'.\n")
 
 # Update the testy code on the remote machine to the specified branch. Update the
 # working copy of the .testy configuration, preserving any values set by the
