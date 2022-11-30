@@ -190,7 +190,9 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
             print(f"\nFailed to update {testy} to branch '{testy_branch}'.")
             update_success = False
         finally:
-            # Restore configuration values.
+            # The update_testy function may fail after updating the remote configuration
+            # file. Make sure the pre-update configuration values are restored on both
+            # failure and success.
             set_value(c, "application", "current_workload", workload)
 
     if wiredtiger_branch:
