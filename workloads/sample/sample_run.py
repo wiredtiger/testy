@@ -70,7 +70,7 @@ threads = list()
 
 # Create tables periodically.
 table_name_length = 4
-table_config = "key_format=S,value_format=S,exclusive"
+table_config = "key_format=u,value_format=u,exclusive"
 create_interval_sec = 60
 
 create_thread = pythread.Thread(target=create, args=(connection, create_interval_sec,

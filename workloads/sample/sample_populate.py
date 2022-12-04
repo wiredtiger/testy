@@ -77,7 +77,7 @@ num_tables = num_threads * tables_per_thread
 tables = []
 # This allows enough combinations.
 table_name_length = 4
-table_config = "key_format=S,value_format=S,exclusive"
+table_config = "key_format=u,value_format=u,exclusive"
 
 threads = []
 print(f"Creating {num_tables} tables ...", end='', flush=True)
