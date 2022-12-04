@@ -9,6 +9,7 @@ from invocations.console import confirm
 
 testy_config = ".testy"
 testy = "\033[1;36mtesty\033[0m"
+wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 
 # ---------------------------------------------------------------------------------------
@@ -52,7 +53,8 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     # Build WiredTiger.
     wt_home_dir = config.get("wiredtiger", "home_dir")
     wt_build_dir = config.get("wiredtiger", "build_dir")
-    build_wiredtiger(c, wt_home_dir, wt_build_dir, wiredtiger_branch)
+    if not build_wiredtiger(c, wt_home_dir, wt_build_dir, wiredtiger_branch):
+        raise Exit(f"Failed to build {wiredtiger} for branch '{wiredtiger_branch}'.")
 
     # Install services.
     # TODO: Update this part of the installation when the service implementation
@@ -160,7 +162,52 @@ def stop(c):
         else:
             raise Exit(f"Failed to stop {testy}.")
     else:
-        raise Exit(f"{testy} is not running.")
+        print(f"{testy} is not running.")
+
+# Update the WiredTiger and/or testy source on the remote server to the specified GitHub
+# branch. If an argument is not specified, no update is made. Updates to WiredTiger are
+# performed in line with the WiredTiger documentation for upgrading and downgrading databases,
+# as specified here: https://source.wiredtiger.com/develop/upgrade.html.
+@task
+def update(c, wiredtiger_branch=None, testy_branch=None):
+
+    if not wiredtiger_branch and not testy_branch:
+        raise Exit("\nError: No update target specified.")
+
+    # Stop testy service.
+    stop(c)
+
+    # Save values set by the application.
+    workload = get_value(c, "application", "current_workload")
+
+    # Do the updates.
+    update_success = True
+
+    if testy_branch:
+        try:
+            update_testy(c, testy_branch)
+        except:
+            print(f"\nFailed to update {testy} to branch '{testy_branch}'.")
+            update_success = False
+        finally:
+            # The update_testy function may fail after updating the remote configuration
+            # file. Make sure the pre-update configuration values are restored on both
+            # failure and success.
+            set_value(c, "application", "current_workload", workload)
+
+    if wiredtiger_branch:
+        try:
+            update_wiredtiger(c, wiredtiger_branch)
+        except:
+            print(f"\nFailed to update {wiredtiger} to branch '{wiredtiger_branch}'.")
+            update_success = False
+
+    if update_success:
+        # Start testy service.
+        start(c, workload)
+    else:
+        raise Exit("One or more errors occurred during update. Please retry the " \
+                   f"update or run 'fab start' to restart {testy}.")
 
 # The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
 # provided, the current workload is returned.
@@ -341,6 +388,12 @@ def git_clone(c, git_url, local_dir, branch):
         else:
             raise Exit()
 
+# Check out the specified branch from GitHub.
+def git_checkout(c, dir, branch):
+    with c.cd(dir):
+        print(f"Checking out branch '{branch}' ...")
+        return c.run(f"git checkout {branch}", warn=True)
+
 # Create a working copy of a file or directory on the remote machine that can
 # be modified by the specified user.
 #   'src' is the full path of the file or directory to copy
@@ -358,28 +411,37 @@ def create_working_copy(c, src, dest, user=None):
         print(f"Updating user to '{user}' for '{dest_name}'")
         c.sudo(f"chown -R {user}:{user} {dest_name}")
 
-# Build WiredTiger for the specified branch.
+# Build WiredTiger for the specified branch. The function returns True if the WiredTiger
+# configuration and build succeed and False if any of the steps fail. An error message is
+# printed to stderr if the command executed by the Fabric run function returns a non-zero
+# status.
 def build_wiredtiger(c, home_dir, build_dir, branch):
 
     with c.cd(home_dir):
-        print(f"Checking out git branch '{branch}' ... ", end='', flush=True)
-        c.run(f"git checkout {branch}")
-        c.run("git pull", hide=True)
-        c.run("rm -rf build && mkdir build")
+        try:
+            c.run("git pull")
+            c.run(f"rm -rf {build_dir} && mkdir {build_dir}")
+        except:
+            return False
 
     with c.cd(build_dir):
-        ninja_build = c.run("which ninja", warn=True, hide=True)
+        try:
+            ninja_build = c.run("which ninja", warn=True, hide=True)
 
-        print("Configuring WiredTiger")
-        c.run("cmake ../. -G Ninja") if ninja_build else c.run("cmake ../.")
-        print("-- Configuration complete!")
+            print(f"Configuring {wiredtiger} for branch '{branch}'...")
+            c.run("cmake ../. -G Ninja") if ninja_build else c.run("cmake ../.")
+            print("-- Configuration complete!")
 
-        print("Building WiredTiger")
-        if ninja_build:
-            c.run("ninja -j $(grep -c ^processor /proc/cpuinfo)")
-        else:
-             c.run("make -j $(grep -c ^processor /proc/cpuinfo)")
-        print("-- Build complete!")
+            print(f"Building {wiredtiger} for branch '{branch}' ...")
+            if ninja_build:
+                c.run("ninja -j $(grep -c ^processor /proc/cpuinfo)")
+            else:
+                c.run("make -j $(grep -c ^processor /proc/cpuinfo)")
+            print("-- Build complete!")
+        except:
+            return False
+
+    return True
 
 # Install prerequisite software.
 def install_packages(c):
@@ -432,3 +494,58 @@ def install_service(c, service):
         c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
         c.sudo(f"cp {service} /etc/systemd/system && sudo systemctl daemon-reload")
         print("done!")
+
+# Update the wiredtiger code on the remote machine to the specified branch, configure,
+# and build. If any of these steps fail, attempt to restore the previous branch.
+def update_wiredtiger(c, branch):
+
+    # Get current branch.
+    wt_home_dir = get_value(c, "wiredtiger", "home_dir")
+    old_branch = None
+    with c.cd(wt_home_dir):
+        result = c.run("git branch --show-current", hide=True)
+        if not result.stdout:
+            raise Exit(f"Error: {wiredtiger} is not currently on a branch.")
+        old_branch = result.stdout.strip()
+
+    # Check out branch from GitHub.
+    if not git_checkout(c, wt_home_dir, branch):
+        raise Exit(f"Failed to update {wiredtiger} to branch '{branch}'.")
+
+    # Build wiredtiger.
+    wt_build_dir = get_value(c, "wiredtiger", "build_dir")
+    if not build_wiredtiger(c, wt_home_dir, wt_build_dir, branch):
+        print(f"Failed to build {wiredtiger} for branch '{branch}'.")
+        # Try restoring to previous branch.
+        print(f"\nAttempting to restore branch '{old_branch}' ...")
+        if git_checkout(c, wt_home_dir, old_branch) and \
+           build_wiredtiger(c, wt_home_dir, wt_build_dir, old_branch):
+            print(f"Restored {wiredtiger} to branch '{branch}'.")
+        else:
+            raise Exit(f"\nFailed to restore {wiredtiger} to previous branch '{old_branch}'.")
+    else:
+        print(f"\nSuccessfully updated {wiredtiger} to branch '{branch}'.\n")
+
+# Update the testy code on the remote machine to the specified branch. Update the
+# working copy of the .testy configuration, preserving any values set by the
+# framework, and update the available workloads.
+def update_testy(c, branch):
+
+    # Check out branch from GitHub.
+    testy_git_dir = get_value(c, "testy", "home_dir")
+    if not git_checkout(c, testy_git_dir, branch):
+        raise Exit(f"Failed to update {testy} to branch '{branch}'.")
+
+    # Copy testy config and workload directory.
+    user = get_value(c, "application", "user")
+    create_working_copy(c, f"{testy_git_dir}/{testy_config}",
+                        get_value(c, "application", "testy_dir"), user)
+    create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
+                        get_value(c, "application", "workload_dir"), user)
+
+    # Update services.
+    install_service(c, get_value(c, "testy", "testy_service"))
+    #install_service(c, get_value(c, "testy", "backup_service"))
+    #install_service(c, get_value(c, "testy", "crash_service"))
+
+    print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
