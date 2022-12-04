@@ -28,6 +28,7 @@
 #
 
 import os, random, string
+import re
 from pathlib import Path
 from workgen import *
 
@@ -58,13 +59,10 @@ def get_db_size(dir):
 
     path = Path(dir)
 
-    user_tables = [f for f in path.glob("*.wt") if not f.name.startswith("WiredTiger")]
-    internal_tables = [f for f in path.glob("WiredTiger.*")]
-    files = user_tables + internal_tables
-
+    files = [f for f in os.listdir(path) if re.match(r'(.*.wt$|^WiredTiger.*)', f)]
     total_size = 0
     for file in files:
-        total_size += os.stat(file).st_size
+        total_size += os.stat(dir + '/' + file).st_size
     return total_size
 
 
