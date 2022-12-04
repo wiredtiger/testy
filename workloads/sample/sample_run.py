@@ -27,10 +27,8 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import os
 import threading as pythread
 import signal
-from time import sleep
 from sample_common import *
 
 

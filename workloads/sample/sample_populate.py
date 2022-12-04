@@ -27,7 +27,6 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 #
 
-import os
 import random
 import signal
 import threading as pythread
