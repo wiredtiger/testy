@@ -168,13 +168,15 @@ def stop(c):
 @task
 def restart(c, workload=None):
 
-    # If no workload is specified, take the current workload. If there is no current workload, 
-    # restart should not be called. Instead, call start.  
-    if workload == None:
-        workload = get_value(c, "application", "current_workload")
-        if not workload:
-            raise Exit("Restart failed, no running workload. Please use 'fab start'.")
+    # If there is no current workload, restart should not be called. Use start.
+    current_workload = get_value(c, "application", "current_workload")
+    if not current_workload:
+        raise Exit("Restart failed, no running workload. Please use 'fab start'.")
 
+    # If no workload is specified, take the current workload. 
+    if not workload:
+        workload = current_workload
+        
     # Stop the testy workload.
     stop(c)
 
