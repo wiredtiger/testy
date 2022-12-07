@@ -180,13 +180,13 @@ def restart(c, workload=None):
     # Stop the testy workload.
     stop(c)
 
-    # Validate the workload.
+    # Validate the stopped workload.
     user = get_value(c, "application", "user")
-    wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
+    wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
     command = wif + " validate"
     result = c.sudo(command, user=user, warn=True)
     if not result: 
-        raise Exit(f"Validate failed for '{workload}' workload.")
+        raise Exit(f"Validate failed for '{current_workload}' workload.")
     
     # Restart the testy workload.    
     start(c, workload)
