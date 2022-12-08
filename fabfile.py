@@ -164,6 +164,33 @@ def stop(c):
     else:
         print(f"{testy} is not running.")
 
+# Restarts with the specified workload. If no workload is specified, take the current workload. 
+@task
+def restart(c, workload=None):
+
+    # If there is no current workload, restart should not be called. Use start.
+    current_workload = get_value(c, "application", "current_workload")
+    if not current_workload:
+        raise Exit("Restart failed, no running workload. Please use 'fab start'.")
+
+    # If no workload is specified, take the current workload. 
+    if not workload:
+        workload = current_workload
+        
+    # Stop the testy workload.
+    stop(c)
+
+    # Validate the stopped workload.
+    user = get_value(c, "application", "user")
+    wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
+    command = wif + " validate"
+    result = c.sudo(command, user=user, warn=True)
+    if not result: 
+        raise Exit(f"Validate failed for '{current_workload}' workload.")
+    
+    # Restart the testy workload.    
+    start(c, workload)
+
 # Update the WiredTiger and/or testy source on the remote server to the specified GitHub
 # branch. If an argument is not specified, no update is made. Updates to WiredTiger are
 # performed in line with the WiredTiger documentation for upgrading and downgrading databases,
