@@ -1,11 +1,12 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import re, configparser as cp
+import os, re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
+from contextlib import redirect_stdout
 
 testy_config = ".testy"
 testy = "\033[1;36mtesty\033[0m"
@@ -315,7 +316,42 @@ def workload(c, upload=None, list=False, describe=None):
             print(f"The current workload is {current_workload}.")
         else: 
             print("The current workload is unspecified.")
+    
+    return current_workload or None
 
+# Print information about the testy framework including testy and WiredTiger branch and commit hash,
+# current workload, testy service status and the WiredTiger version. 
+@task
+def info(c):
+    wt_dir = get_value(c, "wiredtiger", "home_dir")
+    with c.cd(wt_dir):
+        wt_branch = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
+        wt_commit = c.run("git rev-parse HEAD", hide=True)
+        wt_version = c.run(". RELEASE_INFO && echo $WIREDTIGER_VERSION", hide=True)
+
+    testy_dir = get_value(c, "testy", "home_dir")
+    with c.cd(testy_dir):
+        testy_branch = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
+        testy_commit = c.run("git rev-parse HEAD", hide=True)
+
+    testy_workload = None
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        testy_workload = workload(c)
+
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+    service = f"$(systemd-escape --template {service_name} \"{testy_workload}\")"
+    testy_status = c.run(f"systemctl is-active {service}", hide=True, warn=True)
+
+    print(f"{wiredtiger} branch:  {wt_branch.stdout}"
+          f"{wiredtiger} commit:  {wt_commit.stdout}"
+          f"{wiredtiger} version: {wt_version.stdout}\n"
+          f"{testy} branch:   {testy_branch.stdout}"
+          f"{testy} commit:   {testy_commit.stdout}"
+          f"{testy} workload: {testy_workload}\n"
+          f"{testy} status:   {testy_status.stdout}")
+
+    if testy_status:
+        c.run(f"systemctl status {service}")
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
@@ -535,7 +571,7 @@ def update_wiredtiger(c, branch):
     wt_home_dir = get_value(c, "wiredtiger", "home_dir")
     old_branch = None
     with c.cd(wt_home_dir):
-        result = c.run("git branch --show-current", hide=True)
+        result = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
         if not result.stdout:
             raise Exit(f"Error: {wiredtiger} is not currently on a branch.")
         old_branch = result.stdout.strip()
