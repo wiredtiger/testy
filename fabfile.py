@@ -7,6 +7,7 @@ from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
 
+testy_config = ".testy"
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
@@ -21,7 +22,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
     # Read configuration file.
     config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    config.read(c.testy_config)
+    config.read(testy_config)
 
     # Create application user.
     user = config.get("application", "user")
@@ -45,7 +46,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
        git_clone(c, config.get(repo[0], "git_url"), config.get(repo[0], "home_dir"), repo[1])
 
     # Create working files and directories that can be modified by the framework user.
-    create_working_copy(c, config.get("testy", "home_dir") + f"/{c.testy_config}",
+    create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
 
@@ -348,9 +349,9 @@ def set_value(c, section, key, value):
 def parser_operation(c, func, section, key=None, value=None):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    parser.read(c.testy_config)
+    parser.read(testy_config)
 
-    config = parser.get("application", "testy_dir") + f"/{c.testy_config}"
+    config = parser.get("application", "testy_dir") + f"/{testy_config}"
     script = parser.get("testy", "parse_script")
     user = parser.get("application", "user")
 
@@ -564,7 +565,7 @@ def update_testy(c, branch):
 
     # Copy testy config and workload directory.
     user = get_value(c, "application", "user")
-    create_working_copy(c, f"{testy_git_dir}/{c.testy_config}",
+    create_working_copy(c, f"{testy_git_dir}/{testy_config}",
                         get_value(c, "application", "testy_dir"), user)
     create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
                         get_value(c, "application", "workload_dir"), user)
