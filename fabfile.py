@@ -1,13 +1,13 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import re, configparser as cp
+import os, re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
+from contextlib import redirect_stdout
 
-testy_config = ".testy"
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
@@ -22,7 +22,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
     # Read configuration file.
     config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    config.read(testy_config)
+    config.read(c.testy_config)
 
     # Create application user.
     user = config.get("application", "user")
@@ -46,7 +46,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
        git_clone(c, config.get(repo[0], "git_url"), config.get(repo[0], "home_dir"), repo[1])
 
     # Create working files and directories that can be modified by the framework user.
-    create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
+    create_working_copy(c, config.get("testy", "home_dir") + f"/{c.testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
 
@@ -163,6 +163,33 @@ def stop(c):
             raise Exit(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
+
+# Restarts with the specified workload. If no workload is specified, take the current workload. 
+@task
+def restart(c, workload=None):
+
+    # If there is no current workload, restart should not be called. Use start.
+    current_workload = get_value(c, "application", "current_workload")
+    if not current_workload:
+        raise Exit("Restart failed, no running workload. Please use 'fab start'.")
+
+    # If no workload is specified, take the current workload. 
+    if not workload:
+        workload = current_workload
+        
+    # Stop the testy workload.
+    stop(c)
+
+    # Validate the stopped workload.
+    user = get_value(c, "application", "user")
+    wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
+    command = wif + " validate"
+    result = c.sudo(command, user=user, warn=True)
+    if not result: 
+        raise Exit(f"Validate failed for '{current_workload}' workload.")
+    
+    # Restart the testy workload.    
+    start(c, workload)
 
 # Update the WiredTiger and/or testy source on the remote server to the specified GitHub
 # branch. If an argument is not specified, no update is made. Updates to WiredTiger are
@@ -288,7 +315,42 @@ def workload(c, upload=None, list=False, describe=None):
             print(f"The current workload is {current_workload}.")
         else: 
             print("The current workload is unspecified.")
+    
+    return current_workload or None
 
+# Print information about the testy framework including testy and WiredTiger branch and commit hash,
+# current workload, testy service status and the WiredTiger version. 
+@task
+def info(c):
+    wt_dir = get_value(c, "wiredtiger", "home_dir")
+    with c.cd(wt_dir):
+        wt_branch = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
+        wt_commit = c.run("git rev-parse HEAD", hide=True)
+        wt_version = c.run(". RELEASE_INFO && echo $WIREDTIGER_VERSION", hide=True)
+
+    testy_dir = get_value(c, "testy", "home_dir")
+    with c.cd(testy_dir):
+        testy_branch = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
+        testy_commit = c.run("git rev-parse HEAD", hide=True)
+
+    testy_workload = None
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        testy_workload = workload(c)
+
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+    service = f"$(systemd-escape --template {service_name} \"{testy_workload}\")"
+    testy_status = c.run(f"systemctl is-active {service}", hide=True, warn=True)
+
+    print(f"{wiredtiger} branch:  {wt_branch.stdout}"
+          f"{wiredtiger} commit:  {wt_commit.stdout}"
+          f"{wiredtiger} version: {wt_version.stdout}\n"
+          f"{testy} branch:   {testy_branch.stdout}"
+          f"{testy} commit:   {testy_commit.stdout}"
+          f"{testy} workload: {testy_workload}\n"
+          f"{testy} status:   {testy_status.stdout}")
+
+    if testy_status:
+        c.run(f"systemctl status {service}")
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
@@ -322,9 +384,9 @@ def set_value(c, section, key, value):
 def parser_operation(c, func, section, key=None, value=None):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    parser.read(testy_config)
+    parser.read(c.testy_config)
 
-    config = parser.get("application", "testy_dir") + f"/{testy_config}"
+    config = parser.get("application", "testy_dir") + f"/{c.testy_config}"
     script = parser.get("testy", "parse_script")
     user = parser.get("application", "user")
 
@@ -446,38 +508,43 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
 # Install prerequisite software.
 def install_packages(c):
 
-    if c.run("which apt", warn=True, hide=True):
-        installer = "apt"
+    if c.run("which apt-get", warn=True, hide=True):
+        installer = "apt-get"
     elif c.run("which dnf", warn=True, hide=True):
-        installer = "dnf"
+        installer = "dnf --disableplugin=spacewalk"
     elif c.run("which yum", warn=True, hide=True):
         installer = "yum"
     else:
         raise Exit("Error: Unable to determine package installer.")
 
-    is_rpm = (installer != "apt")
+    is_rpm = (installer != "apt-get")
     packages = ["cmake", "ccache", "ninja-build", "python3-dev", "swig", "libarchive"]
-    print("Installing required software packages")
+    print("Installing required software packages ...", flush=True)
 
     if is_rpm:
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                print(f"-- Package '{package}' is already installed.")
-            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f"-- Installed package '{package}'.")
+                if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
+                    print(f" -- Package '{package}' is already the newest version.", flush=True)
+                    continue
+            # Use --best to install the newest package version.
+            if c.sudo(f"{installer} -y --best install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed.", flush=True)
     else:
+        c.sudo("{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
-                print(f"-- Package '{package}' is already installed.")
-            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f"-- Installed package '{package}'.")
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed.", flush=True)
 
     # Attempt to pip install ninja if it was not available through the package manager.
     if not c.run("which ninja", warn=True, hide=True):
         if c.sudo(f"python3 -m pip install ninja", warn=True, hide=True):
-            print(f"-- Installed package 'ninja'.")
+            print(f" -- Package 'ninja' installed by pip.", flush=True)
 
-    print("-- Package installation complete!")
+    print("Package installation complete!")
 
 # Install a systemd service.
 def install_service(c, service):
@@ -503,7 +570,7 @@ def update_wiredtiger(c, branch):
     wt_home_dir = get_value(c, "wiredtiger", "home_dir")
     old_branch = None
     with c.cd(wt_home_dir):
-        result = c.run("git branch --show-current", hide=True)
+        result = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
         if not result.stdout:
             raise Exit(f"Error: {wiredtiger} is not currently on a branch.")
         old_branch = result.stdout.strip()
@@ -538,7 +605,7 @@ def update_testy(c, branch):
 
     # Copy testy config and workload directory.
     user = get_value(c, "application", "user")
-    create_working_copy(c, f"{testy_git_dir}/{testy_config}",
+    create_working_copy(c, f"{testy_git_dir}/{c.testy_config}",
                         get_value(c, "application", "testy_dir"), user)
     create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
                         get_value(c, "application", "workload_dir"), user)
