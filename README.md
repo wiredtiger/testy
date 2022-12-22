@@ -72,3 +72,26 @@ If a workload is already running, the start function will not work. Either call 
   ```
   fab -H user@host update --wiredtiger_branch={branch} --testy_branch={branch}
   ```
+
+-  The `info` function allows you to see information relating to the testy service. This function will print the current WiredTiger and Testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
+
+  ```
+  fab -H user@host info
+  ```
+
+# Adding changes to fabfile.py
+
+To add a new functionality in fabfile.py follow the structure: 
+
+  ```
+  @task
+  def new_function(c, additional_arguments):
+
+      c.command()
+
+  ```
+
+The fab function requires a connection argument passed in `c` in the example above, all fab functions will have this argument.This is the connection to the remote server. Optionally you can add addiitonal arguments to the function as well. 
+When you would like to execute a command on the remote server, you will used the connection argument `c` passed in and can execute commands such as `c.sudo` or  `c.run` etc. To execute commands locally, use the `local()` command. 
+
+More inforamtion on fabric commands can be found here: https://docs.fabfile.org/en/1.11/tutorial.html
