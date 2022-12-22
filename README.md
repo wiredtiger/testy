@@ -91,7 +91,13 @@ To add a new functionality in fabfile.py follow the structure:
 
   ```
 
-The fab function requires a connection argument passed in `c` in the example above, all fab functions will have this argument.This is the connection to the remote server. Optionally you can add addiitonal arguments to the function as well. 
-When you would like to execute a command on the remote server, you will used the connection argument `c` passed in and can execute commands such as `c.sudo` or  `c.run` etc. To execute commands locally, use the `local()` command. 
+The fab function requires a connection argument passed in such as `c` in the example above, this is the connection to the remote server. All fab functions will need this argument. 
+- You can also add additional arguments that give the user ability to pass arguments in to these fab functions as well. 
+
+These functions will allow you to execute commands both on the remote server and locally. 
+
+- When you would like to execute a command on the remote server, you will used the connection argument `c` passed in and can execute commands such as `c.sudo()` or  `c.run()` etc. 
+
+- To execute commands locally, use the `local()` command. 
 
 More inforamtion on fabric commands can be found here: https://docs.fabfile.org/en/1.11/tutorial.html
