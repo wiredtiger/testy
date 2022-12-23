@@ -19,7 +19,7 @@ Running testy requires two machines: a local machine from which to run the `fab`
   where user@host is the user and host name used to log into the remote evergreen host (it looks something like `ubuntu@ec2-7-21-20-75.ap-southeast-2.compute.amazonaws.com`).
 
 ## Using workloads
-The workload function has 3 options: upload, list and describe. If no option is given, it will by default return the current workload. Up to 3 options can be given at a time, and they will be executed in the order of 1. upload, 2.list, and 3. describe. If one option fails, an error message will be printed and the other options will continue to execute. 
+The workload function has 3 options: upload, list and describe. If no option is given it will return the current workload by default. Up to 3 options can be given at a time in any order but they will be executed in the order of 1. upload, 2.list, and 3. describe. If one option fails, an error message will be printed and the other options will continue to execute. 
 
   ```
     fab -H user@host workload --upload={required_argument} --list --descibe={optional_argument}
@@ -28,7 +28,7 @@ The workload function has 3 options: upload, list and describe. If no option is 
     fab -H user@host workload
   ```
 
-- The `workload --upload` requires on argument, the compressed workload folder. The function will upload a workload from your local network to the remote testy server, you will need a zip folder containing a <workload> directory with a <workload>.sh file, and any other files needed to run the workload. The <workload> directory and <workload>.sh file are required to share the same name to run. The current implementation can extract most compressed files, and will extract the files in the framework's '/workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the testy framework. 
+- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local network to the remote testy server, you will need a zip folder containing a <workload> directory with a <workload>.sh file, and any other files needed to run the workload. The <workload> directory and <workload>.sh file are required to share the same name to operate. The current implementation can extract most compressed file types, and will extract the files in the framework's '/workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the testy framework. 
   ```
    fab -H user@host workload --upload={workload}.{zip}
   ```
@@ -38,7 +38,7 @@ The workload function has 3 options: upload, list and describe. If no option is 
    fab -H user@host workload --list
   ```
 
-- The `workload --describe` function takes an optional workload name as a required argument and will describe the given workload, if no argument is given, the current workload will be used. If there is no current workload, an error message be printed. This description will be implemented by the user in the workload's workload interface face <workload>.sh in the given <workload>'s directory, if not implemented the function will not be able to describe the workload. 
+- The `workload --describe` function takes an optional workload name as a required argument and will describe the given workload. If no argument is given, the current workload will be used. If there is no current workload, an error message be printed. This description will be implemented by the user in the workload's workload interface face <workload>.sh in the given <workload>'s directory, if not implemented the function will not be able to describe the workload. 
   ```
    fab -H user@host workload --descibe={workload}
   ```
@@ -60,24 +60,22 @@ If a workload is already running, the start function will not work. Either call 
   fab -H user@host restart {workload}
   ```
 
-- The `stop` function does not take any arguments and will stop the workload. If this command fails, an error message will be returned.
+- The `stop` function does not take any arguments and will stop the running workload.
   ```
   fab -H user@host stop
   ```
 
 ## Other Commands 
 
-- The `update` function allows you update the WiredTiger and/or Testy source on the framework. This function can take two optional arguments, a WiredTiger branch or a Testy branch and will update to these branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no argumnets are provided, no updates will be made. An error message will be returned on failure. 
-
+- The `update` function allows you update the WiredTiger and/or Testy source on the framework. This function can take two optional arguments, a WiredTiger branch and/or a Testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no argumnets are provided, no updates will be made. 
   ```
   fab -H user@host update --wiredtiger_branch={branch} --testy_branch={branch}
   ```
 
 -  The `info` function allows you to see information relating to the testy service. This function will print the current WiredTiger and Testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
-
-  ```
-  fab -H user@host info
-  ```
+    ```
+    fab -H user@host info
+    ```
 
 # Adding changes to fabfile.py
 
@@ -88,13 +86,14 @@ To add a new functionality in fabfile.py follow the structure:
   def new_function(c, additional_arguments):
 
       c.command()
+      local()
 
   ```
 
-The fab function requires a connection argument passed in such as `c` in the example above, this is the connection to the remote server. All fab functions will need this argument. 
-- You can also add additional arguments that give the user ability to pass arguments in to these fab functions as well. 
+The fab function requires a connection argument passed in such as `c` in the example above, this is the connection to the remote server. All executable fabric functions will need this argument. 
+- You can also add additional arguments that give the user ability to pass arguments into these fabric functions as well. 
 
-These functions will allow you to execute commands both on the remote server and locally. 
+Fabric allows you to execute shell commands both on the remote server and locally. 
 
 - When you would like to execute a command on the remote server, you will used the connection argument `c` passed in and can execute commands such as `c.sudo()` or  `c.run()` etc. 
 
