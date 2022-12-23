@@ -508,38 +508,43 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
 # Install prerequisite software.
 def install_packages(c):
 
-    if c.run("which apt", warn=True, hide=True):
-        installer = "apt"
+    if c.run("which apt-get", warn=True, hide=True):
+        installer = "apt-get"
     elif c.run("which dnf", warn=True, hide=True):
-        installer = "dnf"
+        installer = "dnf --disableplugin=spacewalk"
     elif c.run("which yum", warn=True, hide=True):
         installer = "yum"
     else:
         raise Exit("Error: Unable to determine package installer.")
 
-    is_rpm = (installer != "apt")
+    is_rpm = (installer != "apt-get")
     packages = ["cmake", "ccache", "ninja-build", "python3-dev", "swig", "libarchive"]
-    print("Installing required software packages")
+    print("Installing required software packages ...", flush=True)
 
     if is_rpm:
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                print(f"-- Package '{package}' is already installed.")
-            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f"-- Installed package '{package}'.")
+                if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
+                    print(f" -- Package '{package}' is already the newest version.", flush=True)
+                    continue
+            # Use --best to install the newest package version.
+            if c.sudo(f"{installer} -y --best install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed.", flush=True)
     else:
+        c.sudo("{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
-                print(f"-- Package '{package}' is already installed.")
-            elif c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f"-- Installed package '{package}'.")
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed.", flush=True)
 
     # Attempt to pip install ninja if it was not available through the package manager.
     if not c.run("which ninja", warn=True, hide=True):
         if c.sudo(f"python3 -m pip install ninja", warn=True, hide=True):
-            print(f"-- Installed package 'ninja'.")
+            print(f" -- Package 'ninja' installed by pip.", flush=True)
 
-    print("-- Package installation complete!")
+    print("Package installation complete!")
 
 # Install a systemd service.
 def install_service(c, service):
