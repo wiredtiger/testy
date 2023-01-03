@@ -22,7 +22,7 @@ Running testy requires two machines: a local machine from which to run the `fab`
 The workload function has 3 options: upload, list and describe. If no option is given it will return the current workload by default. Up to 3 options can be given at a time in any order but they will be executed in the order of 1. upload, 2.list, and 3. describe. If one option fails, an error message will be printed and the other options will continue to execute. 
 
   ```
-    fab -H user@host workload --upload={required_argument} --list --descibe={optional_argument}
+    fab -H user@host workload --upload={required-argument} --list --descibe={optional-argument}
 
     # This will return the current workload
     fab -H user@host workload
@@ -69,7 +69,8 @@ If a workload is already running, the start function will not work. Either call 
 
 - The `update` function allows you update the WiredTiger and/or Testy source on the framework. This function can take two optional arguments, a WiredTiger branch and/or a Testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no argumnets are provided, no updates will be made. 
   ```
-  fab -H user@host update --wiredtiger_branch={branch} --testy_branch={branch}
+  # Note that arguments named with '_' will need to changed to '-' in the call from terminal. 
+  fab -H user@host update --wiredtiger-branch={branch} --testy-branch={branch}
   ```
 
 -  The `info` function allows you to see information relating to the testy service. This function will print the current WiredTiger and Testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
