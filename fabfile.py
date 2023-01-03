@@ -503,7 +503,7 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
         except:
             return False
 
-    return False
+    return True
 
 # Install prerequisite software.
 def install_packages(c):
@@ -571,7 +571,7 @@ def update_wiredtiger(c, branch):
     old_branch = None
     with c.cd(wt_home_dir):
         result = c.run("git rev-parse --abbrev-ref HEAD", hide=True)
-        commit = c.run("git rev-parse HEAD")
+        commit = c.run("git rev-parse HEAD", hide=True)
         if not result.stdout:
             raise Exit(f"Error: {wiredtiger} is not currently on a branch.")
         old_branch = result.stdout.strip()
@@ -587,6 +587,7 @@ def update_wiredtiger(c, branch):
         print(f"Failed to build {wiredtiger} for branch '{branch}'.")
         # Try restoring to previous branch.
         print(f"\nAttempting to restore branch '{old_branch}' ...")
+        # If we are on the same branch and the new commits breaks, use an older working commit.
         if old_branch == branch:
             print(commit_hash, "commit")
             if git_checkout(c, wt_home_dir, commit_hash) and \
