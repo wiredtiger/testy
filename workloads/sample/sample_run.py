@@ -86,7 +86,7 @@ update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
 insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
 
 # Define and run workload.
-workload = Workload(context, 10* insert_thread + 10*update_thread)
+workload = Workload(context, 10*insert_thread + 10*update_thread)
 workload.options.run_time = 2147483647
 workload.run(connection)
 
