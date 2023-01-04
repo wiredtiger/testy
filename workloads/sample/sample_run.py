@@ -80,6 +80,14 @@ for thread in threads:
     thread.join()
 threads = []
 
+# Insert single read - need to update table being used once that change has come in. 
+opread= Operation(Operation.OP_SEARCH, table)
+ops = opread * 10 + Operation(Operation.OP_SLEEP, "10")
+treader= Thread(ops)
+workload= Workload(context, treader * 10)
+workload.options.run_time = 100000
+workload.run(connection)
+
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
 connection.close()
