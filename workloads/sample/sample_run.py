@@ -52,7 +52,6 @@ def create(connection, interval_sec, name_length, table_config):
         table_name = "table:" + generate_random_string(name_length)
         try:
             session.create(table_name, table_config)
-            print(f"created table {table_name}")
         except wiredtiger.WiredTigerError as e:
             assert "file exists" in str(e).lower()
         thread_exit.wait(interval_sec)
