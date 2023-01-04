@@ -52,6 +52,7 @@ def create(connection, interval_sec, name_length, table_config):
         table_name = "table:" + generate_random_string(name_length)
         try:
             session.create(table_name, table_config)
+            print(f"created table {table_name}")
         except wiredtiger.WiredTigerError as e:
             assert "file exists" in str(e).lower()
         thread_exit.wait(interval_sec)
@@ -65,6 +66,30 @@ context = Context()
 connection = open_connection(context)
 
 threads = list()
+
+# Make smaller inserts more frequently and large ones less frequently.
+insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024)) + \
+              Operation(Operation.OP_SLEEP, "10")
+insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1000*1024)) + \
+              Operation(Operation.OP_SLEEP, "30")
+insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
+              Operation(Operation.OP_SLEEP, "60")
+insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
+
+# Perform updates at random using the pareto distribution. Make smaller updates more frequently
+# and large ones less frequently.
+update_op_1 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
+update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
+update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
+insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
+
+# Define and run workload.
+workload = Workload(context, 10* insert_thread + 10*update_thread)
+workload.options.run_time = 2147483647
+workload.run(connection)
 
 # Create tables periodically.
 table_name_length = 4
