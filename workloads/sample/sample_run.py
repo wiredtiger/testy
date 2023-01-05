@@ -80,6 +80,14 @@ for thread in threads:
     thread.join()
 threads = []
 
+# Insert single delete - need to update table being used once that change has come in. 
+opremove= Operation(Operation.OP_REMOVE, table)
+ops = opremove * 10 + Operation(Operation.OP_SLEEP, "10")
+tremover= Thread(ops)
+workload= Workload(context, tremover * 10)
+workload.options.run_time = 100000
+workload.run(connection)
+
 # Finish with a checkpoint to make all data durable.
 checkpoint(context, connection)
 connection.close()
