@@ -43,7 +43,7 @@ If a workload is already running, the start function will not work. Either call 
   ```
   fab -H user@host stop
   ```
--  The `info` function allows you to see information relating to the testy service. This function will print the current WiredTiger and Testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
+-  The `info` function allows you to see information relating to the testy service. This function will print the current wiredtiger and testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
     ```
     fab -H user@host info
     ```
@@ -58,7 +58,7 @@ The workload function has three options: upload, list and describe. If no option
   fab -H user@host workload
   ```
 
-- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local network to the remote testy server. You will need an archive containing a {workload} directory with a workload interface file ({workload}.sh), and any other files needed to run the workload. The {workload} directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This will extract the files in the framework's '/workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the remote server. 
+- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local network to the remote testy server. You will need an archive containing a `workload` directory with a workload interface file ({workload}.sh), and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This will extract the files in the framework's '/workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the remote server. 
   ```
   fab -H user@host workload [--upload=<workload.zip>]
   ```
@@ -68,7 +68,7 @@ The workload function has three options: upload, list and describe. If no option
   fab -H user@host workload [--list]
   ```
 
-- The `workload --describe` function takes an optional workload name as an argument and will describe the given workload. If no argument is given, the current workload will be used. If there is no current workload, an error message will be printed. This description will be implemented by the user in the workload's workload interface file {workload}.sh. If not implemented, the function will not be able to describe the workload. 
+- The `workload --describe` function takes an optional workload name as an argument and will describe the given workload. If no argument is given, the current workload will be used. If there is no current workload, an error message will be printed. This description will be implemented by the user in the workload's workload interface file `{workload}.sh`. If not implemented, the function will not be able to describe the workload. 
   ```
   fab -H user@host workload [--describe=[workload]]
   ```
@@ -76,7 +76,7 @@ The workload function has three options: upload, list and describe. If no option
 
 ## Updating testy
 
-- The `update` function allows you update the WiredTiger and/or Testy source on the framework. This function can take two optional arguments, a WiredTiger branch and/or a Testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made. 
+- The `update` function allows you update the wiredTiger and/or testy source on the remote. This function can take two optional arguments, a wiredTiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made. 
   ```
   fab -H user@host update [--wiredtiger-branch=<branch>] [--testy-branch=<branch>]
   ```
@@ -84,17 +84,19 @@ The workload function has three options: upload, list and describe. If no option
 
 ## Adding functions to fabfile.py
 
-To add a new functionality in fabfile.py follow the structure: 
+We use (Fabric)[https://www.fabfile.org/] -- a high-level Python library designed to execute shell commands remotely over SSH -- to manage our remote `testy` server. The `testy` commands are defined as `fabric` task functions in the file `fabfile.py`. We illustrate creating a new `testy` function in the example below.
+
+To add new functionality in fabfile.py follow the structure: 
 
   ```
   @task
   def describe(c, workload_name)
       # Full path to the workload interface file. 
-      wif = "testy/workloads/{workload_name}/{workload_name}.sh"
+      wif = f"testy/workloads/{workload_name}/{workload_name}.sh"
 
       # Call on the describe() function in the workload interface file
       command = wif + " describe"
-      result = c.sudo(command, user=user, warn=True)
+      result = c.run(command, user=user, warn=True)
 
       # This will print the result to your local terminal.
       if not result: 
@@ -105,11 +107,11 @@ To add a new functionality in fabfile.py follow the structure:
   ```
   In the terminal we can call this new function `describe` like so:  
   ```
-  # Note that arguments named with '_' will need to changed to '-' in the call from terminal. 
+  # Note that underscores in function arguments are converted to dashes on the command line.  
   fab -H user@host describe <--workload-name=sample>
   ```
 
-The fabric function requires a context argument passed in such as `c` in the example above, this provides the connection to the remote server. All executable fabric functions will need this argument. 
+Fabric tasks require a context object as the first argument followed by zero or more user-defined arguments. The context object (passed in as `c` in the example above) is used to share parser and configuration state with executed tasks and provides functions to execute commands on the remote server, such as `c.run()`.
 - You can also add additional arguments that give the user ability to pass arguments into these fabric functions as well. 
 
 Fabric allows you to execute shell commands both on the remote server and locally. 
