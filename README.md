@@ -84,7 +84,7 @@ The workload function has three options: upload, list and describe. If no option
 
 ## Adding functions to fabfile.py
 
-We use (Fabric)[https://www.fabfile.org/] -- a high-level Python library designed to execute shell commands remotely over SSH -- to manage our remote `testy` server. The `testy` commands are defined as `fabric` task functions in the file `fabfile.py`. We illustrate creating a new `testy` function in the example below.
+We use [Fabric](https://www.fabfile.org/) -- a high-level Python library designed to execute shell commands remotely over SSH -- to manage our remote `testy` server. The `testy` commands are defined as `fabric` task functions in the file `fabfile.py`. We illustrate creating a new `testy` function in the example below.
 
 To add new functionality in fabfile.py follow the structure: 
 
