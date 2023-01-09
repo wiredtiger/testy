@@ -50,7 +50,7 @@ update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
             Value(1024)) + Operation(Operation.OP_SLEEP, "10")
 update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
             Value(1024)) + Operation(Operation.OP_SLEEP, "10")
-insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
+update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
 
 # Define the workload operations.
 workload = Workload(context, 10*insert_thread + 10*update_thread)
