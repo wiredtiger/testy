@@ -32,6 +32,9 @@ from sample_common import *
 context = Context()
 connection = open_connection(context)
 
+# Define the workload.
+workload = Workload(context)
+
 # Add a prefix to the created table names.
 workload.options.create_prefix = "table_"
 
