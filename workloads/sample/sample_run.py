@@ -30,12 +30,32 @@ from sample_common import *
 
 # Set up the WiredTiger connection.
 context = Context()
-connection = open_connection(context)
+config = "create=true,checkpoint=(wait=60),log=(enabled=true)"
+connection = open_connection(context, config)
 
-# Define the workload.
-workload = Workload(context)
+# Make smaller inserts more frequently and large ones less frequently.
+insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024)) + \
+              Operation(Operation.OP_SLEEP, "10")
+insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1000*1024)) + \
+              Operation(Operation.OP_SLEEP, "30")
+insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
+              Operation(Operation.OP_SLEEP, "60")
+insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
 
-# Add a prefix to the created table names.
+# Perform updates at random using the pareto distribution. Make smaller updates more frequently
+# and large ones less frequently.
+update_op_1 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
+update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1000*1024)) + Operation(Operation.OP_SLEEP, "30")
+update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
+update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
+
+# Define the workload operations.
+workload = Workload(context, 10*insert_thread + 10*update_thread)
+
+# Add a prefix to the table names.
 workload.options.create_prefix = "table_"
 
 # Create one table every 30 seconds when the database size is less than 120 GB.
