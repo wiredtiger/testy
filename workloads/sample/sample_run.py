@@ -41,7 +41,7 @@ workload.options.create_count = 1
 workload.options.create_trigger = 120 * 1024
 workload.options.create_target = 120 * 1024
 
-# Drop five tables every 90 seconds when the database size exceeds 120 GB.Stop
+# Drop five tables every 90 seconds when the database size exceeds 120 GB. Stop
 # dropping tables when the database size goes below 80 GB.
 workload.options.drop_interval = 90
 workload.options.drop_count = 5
