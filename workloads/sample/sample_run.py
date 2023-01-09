@@ -57,15 +57,12 @@ read_op = Operation(Operation.OP_SEARCH, table) * 10 + Operation(Operation.OP_SL
 read_thread = Thread(read_op)
 
 # Insert single delete
-opremove= Operation(Operation.OP_REMOVE, table)
-ops = opremove * 10 + Operation(Operation.OP_SLEEP, "10")
-tremover= Thread(ops)
-workload= Workload(context, tremover * 10)
-workload.options.run_time = 2147483647
-workload.run(connection)
+delete_op = Operation(Operation.OP_REMOVE, table) * 10 + Operation(Operation.OP_SLEEP, "10")
+delete_thread = Thread(delete_op)
 
 # Define the workload operations.
-workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread)
+workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
+     10*delete_thread)
 
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
