@@ -150,7 +150,8 @@ def stop(c):
 
     workload = get_value(c, "application", "current_workload")
     if not workload:
-        raise Exit(f"\nUnable to stop {testy}: No workload is defined.")
+        print(f"\nUnable to stop {testy}: No workload is defined.")
+        return
 
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
@@ -454,7 +455,9 @@ def git_clone(c, git_url, local_dir, branch):
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
-        return c.run(f"git checkout {branch}", warn=True)
+        if c.run(f"git checkout {branch}", warn=True):
+            return c.run("git pull")
+        return False
 
 # Create a working copy of a file or directory on the remote machine that can
 # be modified by the specified user.
@@ -481,7 +484,6 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
 
     with c.cd(home_dir):
         try:
-            c.run("git pull")
             c.run(f"rm -rf {build_dir} && mkdir {build_dir}")
         except:
             return False
