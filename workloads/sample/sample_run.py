@@ -25,60 +25,32 @@
 # OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
-#
 
-import threading as pythread
-import signal
 from sample_common import *
 
-
-def signal_handler(signum, frame):
-    signame = signal.Signals(signum).name
-    print(f"{__file__} received signal {signame}.")
-    assert signal.Signals(signum) == signal.SIGTERM
-    global thread_exit
-    thread_exit.set()
-
-
-# Create a table periodically.
-def create(connection, interval_sec, name_length, table_config):
-    assert name_length > 0
-
-    session = connection.open_session()
-
-    while not thread_exit.is_set():
-        # It is possible to have a collision if the table has already been created but it should be
-        # rare.
-        table_name = "table:" + generate_random_string(name_length)
-        try:
-            session.create(table_name, table_config)
-        except wiredtiger.WiredTigerError as e:
-            assert "file exists" in str(e).lower()
-        thread_exit.wait(interval_sec)
-
-
-thread_exit = pythread.Event()
-signal.signal(signal.SIGTERM, signal_handler)
-
-# Setup the WiredTiger connection.
+# Set up the WiredTiger connection.
 context = Context()
-connection = open_connection(context)
+config = "create=true,checkpoint=(wait=60),log=(enabled=true)"
+connection = open_connection(context, config)
 
-threads = list()
+# Make smaller inserts more frequently and large ones less frequently.
+insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024)) + \
+              Operation(Operation.OP_SLEEP, "10")
+insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1000*1024)) + \
+              Operation(Operation.OP_SLEEP, "30")
+insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
+              Operation(Operation.OP_SLEEP, "60")
+insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
 
-# Create tables periodically.
-table_name_length = 4
-table_config = "key_format=u,value_format=u,exclusive"
-create_interval_sec = 60
-
-create_thread = pythread.Thread(target=create, args=(connection, create_interval_sec,
-    table_name_length, table_config))
-threads.append(create_thread)
-create_thread.start()
-
-for thread in threads:
-    thread.join()
-threads = []
+# Perform updates at random using the pareto distribution. Make smaller updates more frequently
+# and large ones less frequently.
+update_op_1 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
+update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1000*1024)) + Operation(Operation.OP_SLEEP, "30")
+update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
+update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
 
 # Insert single read - need to update table being used once that change has come in. 
 opread= Operation(Operation.OP_SEARCH, table)
@@ -88,8 +60,33 @@ workload= Workload(context, treader * 10)
 workload.options.run_time = 2147483647
 workload.run(connection)
 
-# Finish with a checkpoint to make all data durable.
-checkpoint(context, connection)
+# Define the workload operations.
+workload = Workload(context, 10*insert_thread + 10*update_thread)
+
+# Add a prefix to the table names.
+workload.options.create_prefix = "table_"
+
+# Create one table every 30 seconds when the database size is less than 120 GB.
+workload.options.create_interval = 30
+workload.options.create_count = 1
+workload.options.create_trigger = 120 * 1024
+workload.options.create_target = 120 * 1024
+
+# Drop five tables every 90 seconds when the database size exceeds 120 GB. Stop
+# dropping tables when the database size goes below 80 GB.
+workload.options.drop_interval = 90
+workload.options.drop_count = 5
+workload.options.drop_trigger = 120 * 1024
+workload.options.drop_target = 80 * 1024
+
+# Set the workload runtime to maximum value (~68 years).
+workload.options.run_time = 2147483647
+
+# Run the workload.
+ret = workload.run(connection)
+assert ret == 0, ret
+
+# Close the connection.
 connection.close()
 
 print(f"{__file__} exited.")
