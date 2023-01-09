@@ -574,6 +574,8 @@ def update_wiredtiger(c, branch):
         if not result.stdout:
             raise Exit(f"Error: {wiredtiger} is not currently on a branch.")
         old_branch = result.stdout.strip()
+        commit = c.run("git rev-parse HEAD", hide=True)
+        commit_hash = commit.stdout.strip()
 
     # Check out branch from GitHub.
     if not git_checkout(c, wt_home_dir, branch):
@@ -585,7 +587,12 @@ def update_wiredtiger(c, branch):
         print(f"Failed to build {wiredtiger} for branch '{branch}'.")
         # Try restoring to previous branch.
         print(f"\nAttempting to restore branch '{old_branch}' ...")
-        if git_checkout(c, wt_home_dir, old_branch) and \
+        # If we are on the same branch and the new commits breaks, use an older working commit.
+        if old_branch == branch:
+            if git_checkout(c, wt_home_dir, commit_hash) and \
+            build_wiredtiger(c, wt_home_dir, wt_build_dir, commit_hash):
+                print(f"Restored {wiredtiger} branch '{branch}' to the previous commit.")
+        elif git_checkout(c, wt_home_dir, old_branch) and \
            build_wiredtiger(c, wt_home_dir, wt_build_dir, old_branch):
             print(f"Restored {wiredtiger} to branch '{branch}'.")
         else:
