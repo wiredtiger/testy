@@ -52,8 +52,13 @@ update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
             Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
 update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
 
+# Insert single read
+read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
+          Operation(Operation.OP_SLEEP, "10")
+read_thread = Thread(read_op)
+
 # Define the workload operations.
-workload = Workload(context, 10*insert_thread + 10*update_thread)
+workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread)
 
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
