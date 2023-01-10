@@ -42,7 +42,7 @@ If a workload is already running, the start function will not work. Either call 
   ```
   fab -H user@host stop
   ```
-  
+
 -  The `info` function allows you to see information relating to the testy service. This function will print the current wiredtiger and testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
   ```
   fab -H user@host info
@@ -54,7 +54,7 @@ The workload function has three options: upload, list and describe. If no option
   ```
   fab -H user@host workload [--upload=new_workload_name.zip] [--list] [--describe=existing_workload_name]
   
-  # This will return the current workloads
+  # This will return the current workloads.
   fab -H user@host workload
   ```
 
@@ -97,7 +97,7 @@ To add new functionality in fabfile.py follow the structure:
       # Full path to the workload interface file. 
       wif = f"testy/workloads/{workload_name}/{workload_name}.sh"
 
-      # Call on the describe() function in the workload interface file
+      # Call on the describe() function in the workload interface file.
       command = wif + " describe"
       result = c.run(command, user=user, warn=True)
 
