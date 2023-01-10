@@ -57,8 +57,14 @@ read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) 
           Operation(Operation.OP_SLEEP, "10")
 read_thread = Thread(read_op)
 
+# Insert single delete
+delete_op = Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1)) + \
+Operation(Operation.OP_SLEEP, "10")
+delete_thread = Thread(delete_op)
+
 # Define the workload operations.
-workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread)
+workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
+     5*delete_thread)
 
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
