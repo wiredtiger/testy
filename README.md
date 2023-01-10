@@ -25,7 +25,7 @@ You can upload a [workload](#using-fab-workload) or use an existing workload in 
 - The `start` function takes a required workload argument. The function executes the `run()` function as defined in the workload interface file, and also starts the backup and crash testing services. Running the workload, database backups and crash testing are managed on the remote server by linux `systemd` services.
 
 - The `populate` function takes a required workload argument. This function executes on the the `populate()` function as defined in the workload interface file to populate the database required for the workload. 
-
+  
   ```
   fab -H user@host populate <workload>
   fab -H user@host start <workload>
@@ -34,7 +34,6 @@ You can upload a [workload](#using-fab-workload) or use an existing workload in 
 If a workload is already running, the start function will not work. Either call `restart` or `stop`. 
 
 - The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload will be used for the new run. The restart function will also run `validate()` as implemented by the user's workload interface file. If this is not successful, an error message will be returned and restart will be aborted. 
-
   ```
   fab -H user@host restart [workload]
   ```
@@ -43,10 +42,11 @@ If a workload is already running, the start function will not work. Either call 
   ```
   fab -H user@host stop
   ```
+  
 -  The `info` function allows you to see information relating to the testy service. This function will print the current wiredtiger and testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
-    ```
-    fab -H user@host info
-    ```
+  ```
+  fab -H user@host info
+  ```
 
 ## Using `fab workload`
 The workload function has three options: upload, list and describe. If no option is given it will return the current workload. Up to three options can be given at a time in any order but they will be executed in the order of (1) upload, (2) list, and (3) describe. If one option fails, an error message will be printed and the other options will continue to execute. 
@@ -74,7 +74,7 @@ The workload function has three options: upload, list and describe. If no option
 
   # This will describe the current workload.
   fab -H user@host workload --describe
-  ```s
+  ```
 
 
 ## Updating testy
