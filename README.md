@@ -111,7 +111,7 @@ To add new functionality in `fabfile.py` follow the structure:
   In the terminal we can call this new function `describe` like so:  
   ```
   # Note that underscores in function arguments are converted to dashes on the command line.  
-  fab -H user@host describe <--workload-name=sample_workloads>
+  fab -H user@host describe <--workload-name=sample_workload>
   ```
 
 Fabric tasks require a context object as the first argument followed by zero or more user-defined arguments. The context object (passed in as `c` in the example above) is used to share parser and configuration state with executed tasks and provides functions to execute commands on the remote server, such as `c.run()`.
