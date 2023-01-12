@@ -22,9 +22,9 @@ Running testy requires two machines: a local machine from which to run the `fab`
 
 You can upload a [workload](#using-fab-workload) or use an existing workload in the testy framework. If the workload requires the database to be populated before starting, do this first. If either process fails, an error message will be returned.
 
-- The `start` function takes a required workload argument. The function executes the `run()` function as defined in the workload interface file, and also starts the backup and crash testing services. Running the workload, database backups and crash testing are managed on the remote server by linux `systemd` services.
-
 - The `populate` function takes a required workload argument. This function executes on the the `populate()` function as defined in the workload interface file to populate the database required for the workload. 
+
+- The `start` function takes a required workload argument. The function executes the `run()` function as defined in the workload interface file, and also starts the backup and crash testing services. Running the workload, database backups and crash testing are managed on the remote server by linux `systemd` services.
   
   ```
   fab -H user@host populate <workload>
@@ -49,16 +49,16 @@ If a workload is already running, the start function will not work. Either call 
   ```
 
 ## Using `fab workload`
-The workload function has three options: upload, list and describe. If no option is given it will return the current workload. Up to three options can be given at a time in any order but they will be executed in the order of (1) upload, (2) list, and (3) describe. If one option fails, an error message will be printed and the other options will continue to execute. 
+The workload function has three options: upload, list and describe. If no option is given it will return the current workload. Up to three options can be given at a time in any order but they will be executed in the order of (1) `upload`, (2) `list`, and (3) `describe`. If one option fails, an error message will be printed and the other options will continue to execute. 
 
   ```
   fab -H user@host workload [--upload=new_workload_name.zip] [--list] [--describe=existing_workload_name]
   
-  # This will return the current workloads.
+  # This will return the current workload.
   fab -H user@host workload
   ```
 
-- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local network to the remote testy server. You will need an archive containing a `workload` directory with a workload interface file ({workload}.sh), and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This will extract the files in the framework's '/workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the remote server. 
+- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local machine to the remote testy server. You will need an archive containing a `workload` directory with a workload interface file `{workload}.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This will extract the files in the framework's 'workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the remote server. 
   ```
   fab -H user@host workload --upload=<workload.zip>
   ```
@@ -79,7 +79,7 @@ The workload function has three options: upload, list and describe. If no option
 
 ## Updating testy
 
-- The `update` function allows you update the wiredTiger and/or testy source on the remote. This function can take two optional arguments, a wiredTiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made. 
+- The `update` function allows you update the wiredtiger and/or testy source on the remote. This function can take two optional arguments, a wiredtiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made. 
   ```
   fab -H user@host update [--wiredtiger-branch=branch] [--testy-branch=branch]
   ```
@@ -89,7 +89,7 @@ The workload function has three options: upload, list and describe. If no option
 
 We use [Fabric](https://www.fabfile.org/) -- a high-level Python library designed to execute shell commands remotely over SSH -- to manage our remote `testy` server. The `testy` commands are defined as `fabric` task functions in the file `fabfile.py`. We illustrate creating a new `testy` function in the example below.
 
-To add new functionality in fabfile.py follow the structure: 
+To add new functionality in `fabfile.py` follow the structure: 
 
   ```
   @task
@@ -111,7 +111,7 @@ To add new functionality in fabfile.py follow the structure:
   In the terminal we can call this new function `describe` like so:  
   ```
   # Note that underscores in function arguments are converted to dashes on the command line.  
-  fab -H user@host describe <--workload-name=sample>
+  fab -H user@host describe <--workload-name=sample_workloads>
   ```
 
 Fabric tasks require a context object as the first argument followed by zero or more user-defined arguments. The context object (passed in as `c` in the example above) is used to share parser and configuration state with executed tasks and provides functions to execute commands on the remote server, such as `c.run()`.
