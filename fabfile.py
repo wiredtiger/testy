@@ -60,7 +60,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     # TODO: Update this part of the installation when the service implementation
     #       is complete, and add properties in .testy for the service filenames.
     install_service(c, config.get("testy", "testy_service"))
-    #install_service(c, config.get("testy", "backup_service"))
+    install_service(c, config.get("testy", "backup_service"))
     #install_service(c, config.get("testy", "crash_service"))
 
     # Print installation summary on success.
@@ -136,23 +136,35 @@ def start(c, workload):
     else:
         raise Exit("\nUnable to start {testy}.")
 
-    # Then start the backup and crash trigger services (OR start them as part of the
-    # testy-run service).
-    # TODO: Update the start function when the service implementations are complete
+    # Start the backup service.
+    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    backup_dir = get_value(c, "application", "backup_dir")
+
+    # Create directories for each backup.
+    for i in range(1, 4):
+        create_directory(c, backup_dir + "/" + workload + "/" + str(i))
+
+    service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+    c.sudo(f"systemctl start {service}", user="root")
+    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        c.run(f"systemctl status {service}")
+        print(f"\nStarted {testy} backup service workload '{workload}'!")
+    else:
+        raise Exit("\nUnable to start {testy} backup service.")
+
+    # TODO: Start the crash service.
 
 # Stop the testy framework, ensuring that all running processes complete gracefully
 # and WiredTiger is shut down cleanly.
 @task
 def stop(c):
 
-    # TODO: Update this function as necessary when the backup and crash trigger
-    # services are implemented.
-
     workload = get_value(c, "application", "current_workload")
     if not workload:
         print(f"\nUnable to stop {testy}: No workload is defined.")
         return
 
+    # Stop testy service.
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
 
@@ -164,6 +176,21 @@ def stop(c):
             raise Exit(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
+
+    # Stop backup service.
+    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+
+    if c.run(f"systemctl is-active {service}", hide=True, warn=True):
+        print(f"Stopping {testy} backup service. Please wait ...")
+        if c.sudo(f"systemctl stop {service}", user="root"):
+            print(f"{testy} stopped successfully.")
+        else:
+            raise Exit(f"Failed to stop {testy} backup service.")
+    else:
+        print(f"{testy} backup service is not running.")
+
+    # TODO: Stop the crash service.
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -341,6 +368,9 @@ def info(c):
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{testy_workload}\")"
     testy_status = c.run(f"systemctl is-active {service}", hide=True, warn=True)
+    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    backup_service = f"$(systemd-escape --template {backup_service_name} \"{testy_workload}\")"
+    testy_backup_status = c.run(f"systemctl is-active {backup_service}", hide=True, warn=True)
 
     print(f"{wiredtiger} branch:  {wt_branch.stdout}"
           f"{wiredtiger} commit:  {wt_commit.stdout}"
@@ -348,10 +378,14 @@ def info(c):
           f"{testy} branch:   {testy_branch.stdout}"
           f"{testy} commit:   {testy_commit.stdout}"
           f"{testy} workload: {testy_workload}\n"
-          f"{testy} status:   {testy_status.stdout}")
+          f"{testy} status:   {testy_status.stdout}\n"
+          f"{testy} backup status: {testy_backup_status.stdout}\n"
+          )
 
     if testy_status:
         c.run(f"systemctl status {service}")
+    if testy_backup_status:
+        c.run(f"systemctl status {backup_service}")
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
@@ -621,7 +655,7 @@ def update_testy(c, branch):
 
     # Update services.
     install_service(c, get_value(c, "testy", "testy_service"))
-    #install_service(c, get_value(c, "testy", "backup_service"))
+    install_service(c, get_value(c, "testy", "backup_service"))
     #install_service(c, get_value(c, "testy", "crash_service"))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
