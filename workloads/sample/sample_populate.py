@@ -130,6 +130,10 @@ while current_db_size < target_db_size and not thread_exit.is_set():
     # The next generated key/value pair may not fit in the randomly generated size, simply retry if
     # this is the case.
     pop_workload = Workload(context, thread)
+
+    # Disable generation of stats.
+    pop_workload.options.report_enabled = False
+
     try:
         pop_workload.run(connection)
         current_db_size += (key_size + value_size)
