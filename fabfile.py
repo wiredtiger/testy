@@ -533,24 +533,7 @@ def install_packages(c, release):
 
     print("Installing required software packages ...", flush=True)
 
-    if release.startswith("CentOS Linux 7"):
-        c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["centos-release-scl", "devtoolset-9-gcc", "devtoolset-9-gcc-c++", "git",
-                    "python3-devel", "swig", "libarchive"]
-        for package in packages:
-            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' is already the newest version.", flush=True)
-                continue
-            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by {installer}.", flush=True)
-        c.sudo("alternatives --install /usr/bin/gcc gcc /opt/rh/devtoolset-9/root/usr/bin/gcc 10")
-        c.sudo("alternatives --install /usr/bin/g++ g++ /opt/rh/devtoolset-9/root/usr/bin/g++ 10")
-
-        for package in ["pip", "cmake", "ninja", "swig"]:
-            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by pip.", flush=True)
-
-    elif release.startswith("Amazon Linux 2"):
+    if release.startswith("Amazon Linux 2"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
         packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
         for package in packages:
@@ -559,8 +542,8 @@ def install_packages(c, release):
                 continue
             if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' installed by {installer}.", flush=True)
-        c.sudo("alternatives --install /usr/bin/gcc gcc /usr/bin/x86_64-redhat-linux-gcc10-gcc 10")
-        c.sudo("alternatives --install /usr/bin/g++ g++ /usr/bin/x86_64-redhat-linux-gcc10-g++ 10")
+        c.sudo("alternatives --install /usr/bin/gcc gcc /usr/bin/x86_64-redhat-linux-gcc10-gcc 20")
+        c.sudo("alternatives --install /usr/bin/g++ g++ /usr/bin/x86_64-redhat-linux-gcc10-g++ 20")
 
         for package in ["pip", "cmake", "ninja"]:
             if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
@@ -568,7 +551,8 @@ def install_packages(c, release):
 
     elif release.startswith("Red Hat Enterprise Linux 8"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel", "swig", "libarchive"]
+        packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
+                    "swig", "libarchive"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
@@ -581,9 +565,8 @@ def install_packages(c, release):
             if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
                 print(f" -- Package '{package}' installed by pip.", flush=True)
 
-    elif release.startswith("Ubuntu 2"):
-        packages = ["cmake", "ccache", "g++", "libstdc++", "gcc", "git", "ninja-build",
-                    "python3-dev", "swig", "libarchive"]
+    elif release.startswith("Ubuntu 20") or release.startswith("Ubuntu 22"):
+        packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig"]
         c.sudo(f"{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
@@ -592,13 +575,39 @@ def install_packages(c, release):
             if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' installed by {installer}.", flush=True)
 
+    elif release.startswith("Ubuntu 18"):
+        c.sudo("add-apt-repository ppa:ubuntu-toolchain-r/test", hide=True)
+        packages = ["cmake", "ccache", "gcc-11", "g++-11", "git", "ninja-build",
+                    "python3-dev", "swig"]
+        c.sudo(f"{installer} update", warn=True, hide=True)
+        for package in packages:
+            if c.run(f"dpkg -s {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+        c.sudo("update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 20")
+        c.sudo("update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 20")
+
+    elif release.startswith("CentOS Linux 7"):
+        c.sudo(f"{installer} -y update", warn=True, hide=True)
+        packages = ["centos-release-scl", "devtoolset-9-gcc", "devtoolset-9-gcc-c++", "git",
+                    "python3-devel", "swig", "libarchive"]
+        for package in packages:
+            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+        c.sudo("alternatives --install /usr/bin/gcc gcc /opt/rh/devtoolset-9/root/usr/bin/gcc 20")
+        c.sudo("alternatives --install /usr/bin/g++ g++ /opt/rh/devtoolset-9/root/usr/bin/g++ 20")
+
+        for package in ["pip", "cmake", "ninja", "swig"]:
+            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by pip.", flush=True)
+
     else:
         raise Exit(f"Package installation is not implemented for {release}.")
-
-    # Attempt to pip install ninja if it was not available through the package manager.
-    if not c.run("which ninja", warn=True, hide=True):
-        if c.sudo(f"python3 -m pip install ninja", warn=True, hide=True):
-            print(f" -- Package 'ninja' installed by pip.", flush=True)
 
     print("Package installation complete!")
 
