@@ -592,7 +592,7 @@ def install_packages(c, release):
     elif release.startswith("CentOS Linux 7"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
         packages = ["centos-release-scl", "devtoolset-9-gcc", "devtoolset-9-gcc-c++", "git",
-                    "python3-devel", "swig", "libarchive"]
+                    "python3-devel", "libarchive"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
