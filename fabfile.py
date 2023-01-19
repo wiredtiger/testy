@@ -356,7 +356,7 @@ def info(c):
           f"{wiredtiger} version: {wt_version.stdout}\n"
           f"{testy} branch:   {testy_branch.stdout}"
           f"{testy} commit:   {testy_commit.stdout}"
-          f"{testy} workload: {testy_workload.stdout}"
+          f"{testy} workload: {testy_workload}\n"
           f"{testy} status:   {testy_status.stdout}")
 
     if testy_status:
