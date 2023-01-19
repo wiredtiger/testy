@@ -1,6 +1,10 @@
 #!/bin/bash
 # SSH Keys used by the testy user.
 ssh_key_name=etienne-rsa
+# Moutning point.
+mounting_point=/dev/xvdf1
+# Where the backup is mounted.
+folder=/mnt/backup
 
 # Retrieve the testy instance id using the ssh key.
 testy_instance_id=$(aws ec2 describe-instances --filters "Name=key-name,Values=$ssh_key_name" --query "Reservations[*].Instances[*].InstanceId" --output text)
@@ -27,6 +31,14 @@ snapshot_id=$(less "$snapshot" | jq -r .SnapshotId)
 echo "Testy snapshot ID: $snapshot_id"
 
 cloudwatch=$(aws cloudwatch put-metric-data --metric-name backup --dimensions Instance="$testy_instance_id" --namespace "backup" --value 1)
+
+# Check if anything is already mounted. This means a backup is in progress.
+# ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'ls /dev/xvdf1'
+if ls $mounting_point; then
+# if [ $? == 0 ]; then
+    echo "A backup is already in progress!"
+    exit 1
+fi
 
 # TODO - We might be behind, retrieving snapshots that have not been treated should be done.
 # snapshots=$(aws ec2 describe-snapshots --filters Name=status,Values=completed Name=volume-id,Values="$testy_volume_id" Name=tag:analysis,Values="pending" --owner-ids self)
@@ -89,24 +101,19 @@ fi
 # Connect to the instance and mount the volume. Wait for some time after attaching the volume.
 sleep 10
 
-mounting_point=/dev/xvdf1
-folder=/mnt/backup
-# TODO /mnt/<backup_folder>
-# If something is already mounted, error.
 echo -e "\nCreating $folder..."
-ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo mkdir /mnt/backup'
-# sudo mkdir "$folder"
-# TODO Check the output of this command, if it exists, something is up.
+# ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo mkdir -p /mnt/backup'
+sudo mkdir -p "$folder"
 echo "Mounting $mounting_point to $folder..."
-ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo mount /dev/xvdf1 /mnt/backup'
-# sudo mount $mounting_point $folder
+# ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo mount /dev/xvdf1 /mnt/backup'
+sudo mount $mounting_point $folder;
 
 # Verify a table.
 echo -e "\nValidating database..."
 validation=0
-ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com '/mnt/backup/srv/testy/workloads/sample/sample.sh validate'
-# $folder/srv/testy/workloads/sample/sample.sh validate
-if [ $? == 0 ]; then
+# ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com '/mnt/backup/srv/testy/workloads/sample/sample.sh validate'
+# if [ $? == 0 ]; then
+if ! $folder/srv/testy/workloads/sample/sample.sh validate; then
     validation=-1
     cloudwatch=$(aws cloudwatch put-metric-data --metric-name validation --dimensions Instance="$testy_instance_id" --namespace "validation" --value "$validation")
     echo "!!VALIDATION FAILED!!"
@@ -129,8 +136,8 @@ fi
 
 # When the validation is done, unmount and detach the volume.
 echo -e "\nUnmounting $mounting_point..."
-ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo umount /dev/xvdf1'
-# sudo umount "$mounting_point"
+# ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'sudo umount /dev/xvdf1'
+sudo umount "$mounting_point"
 echo "Detaching $volume_id..."
 detach_volume=$(aws ec2 detach-volume --volume-id "$volume_id" --query "State" --output text)
 if [ $? != 0 ]; then
