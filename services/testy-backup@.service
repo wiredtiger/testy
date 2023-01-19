@@ -1,6 +1,8 @@
 [Unit]
 Description="Backup service for Testy"
 Documentation=https://github.com/wiredtiger/testy
+# TODO - Works with stop() but not start()
+Wants=testy-run@%i.service
 After=testy-run@%i.service
 BindsTo=testy-run@%i.service
 
