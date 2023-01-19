@@ -137,6 +137,7 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # First start the testy-run service which controls the long-running workload.
+    # The backup service is tied to the testy-run service.
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
     c.sudo(f"systemctl start {service}", user="root")
     if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
@@ -145,22 +146,6 @@ def start(c, workload):
         print(f"\nStarted {testy} running workload '{workload}'!")
     else:
         raise Exit("\nUnable to start {testy}.")
-
-    # Start the backup service.
-    # backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    # backup_dir = get_value(c, "application", "backup_dir")
-
-    # # Create directories for each backup.
-    # for i in range(1, 4):
-    #     create_directory(c, backup_dir + "/" + workload + "/" + str(i))
-
-    # service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
-    # c.sudo(f"systemctl start {service}", user="root")
-    # if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-    #     c.run(f"systemctl status {service}")
-    #     print(f"\nStarted {testy} backup service workload '{workload}'!")
-    # else:
-    #     raise Exit("\nUnable to start {testy} backup service.")
 
     # TODO: Start the crash service.
 
@@ -186,19 +171,6 @@ def stop(c):
             raise Exit(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
-
-    # Stop backup service.
-    # backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    # service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
-
-    # if c.run(f"systemctl is-active {service}", hide=True, warn=True):
-    #     print(f"Stopping {testy} backup service. Please wait ...")
-    #     if c.sudo(f"systemctl stop {service}", user="root"):
-    #         print(f"{testy} stopped successfully.")
-    #     else:
-    #         raise Exit(f"Failed to stop {testy} backup service.")
-    # else:
-    #     print(f"{testy} backup service is not running.")
 
     # TODO: Stop the crash service.
 
@@ -378,24 +350,17 @@ def info(c):
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{testy_workload}\")"
     testy_status = c.run(f"systemctl is-active {service}", hide=True, warn=True)
-    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    backup_service = f"$(systemd-escape --template {backup_service_name} \"{testy_workload}\")"
-    testy_backup_status = c.run(f"systemctl is-active {backup_service}", hide=True, warn=True)
 
     print(f"{wiredtiger} branch:  {wt_branch.stdout}"
           f"{wiredtiger} commit:  {wt_commit.stdout}"
           f"{wiredtiger} version: {wt_version.stdout}\n"
           f"{testy} branch:   {testy_branch.stdout}"
           f"{testy} commit:   {testy_commit.stdout}"
-          f"{testy} workload: {testy_workload}\n"
-          f"{testy} status:   {testy_status.stdout}\n"
-          f"{testy} backup status: {testy_backup_status.stdout}\n"
-          )
+          f"{testy} workload: {testy_workload.stdout}"
+          f"{testy} status:   {testy_status.stdout}")
 
     if testy_status:
         c.run(f"systemctl status {service}")
-    if testy_backup_status:
-        c.run(f"systemctl status {backup_service}")
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
