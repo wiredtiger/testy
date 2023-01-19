@@ -3,10 +3,11 @@
 
 backup() {
     # Trigger the backup.
-    sudo ${wt_build_dir}/wt -h ${database_dir} backup "$1"
+    ${workload_dir}/sample/my_script.sh
+    # sudo ${wt_build_dir}/wt -h ${database_dir} backup "$1"
 
     if test "$?" -ne "0"; then
-        echo "FAILED"
+        echo "FAILED BAKCUP SCRIPT"
     fi
 }
 
