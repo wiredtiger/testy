@@ -658,7 +658,9 @@ def install_service(c, service):
         c.sudo(f"mkdir -p {conf_dir}")
         conf = get_systemd_service_conf(c, "environment")
         c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
-        c.sudo(f"cp {service} /etc/systemd/system && sudo systemctl daemon-reload")
+        c.sudo(f"cp {service} /etc/systemd/system")
+        c.sudo(f"systemctl enable {service_name}", hide=True)
+        c.sudo("systemctl daemon-reload")
         print("done!")
 
 # Update the wiredtiger code on the remote machine to the specified branch, configure,

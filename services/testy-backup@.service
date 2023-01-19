@@ -1,8 +1,6 @@
 [Unit]
 Description="Backup service for Testy"
 Documentation=https://github.com/wiredtiger/testy
-# TODO - Works with stop() but not start()
-Wants=testy-run@%i.service
 After=testy-run@%i.service
 BindsTo=testy-run@%i.service
 
@@ -10,18 +8,10 @@ BindsTo=testy-run@%i.service
 User=testy
 Group=testy
 Restart=no
-# PermissionsStartOnly=true
-# Create a temporary folder for the backup.
-# ExecStartPre=/bin/mkdir -p '${backup_dir}/%I/tmp'
-# ExecStart=/bin/bash -c '${workload_dir}/%I/%I.sh backup ${backup_dir}/%I/tmp'
 ExecStart=/bin/bash -c '${workload_dir}/%I/%I.sh backup'
-# Validate the new backup.
-# ExecStartPost=/bin/bash -c '${workload_dir}/%I/%I.sh validate ${backup_dir}/%I/tmp'
-# Keep only 3 backups.
-# ExecStartPost=/bin/rm -rf '${backup_dir}/%I/3'
-# ExecStartPost=/bin/mv '${backup_dir}/%I/2' '${backup_dir}/%I/3'
-# ExecStartPost=/bin/mv '${backup_dir}/%I/1' '${backup_dir}/%I/2'
-# ExecStartPost=/bin/mv '${backup_dir}/%I/tmp' '${backup_dir}/%I/1'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console
+
+[Install]
+WantedBy=testy-run@%i.service
