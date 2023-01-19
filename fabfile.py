@@ -1,11 +1,12 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import configparser as cp
+import os, re, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
 from invocations.console import confirm
+from contextlib import redirect_stdout
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
