@@ -1,5 +1,5 @@
 [Unit]
-Description="Backup service for Testy"
+Description="Backup service for testy"
 Documentation=https://github.com/wiredtiger/testy
 After=testy-run@%i.service
 BindsTo=testy-run@%i.service

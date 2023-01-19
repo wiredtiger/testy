@@ -145,7 +145,7 @@ def start(c, workload):
         c.run(f"systemctl status {service}")
         print(f"\nStarted {testy} running workload '{workload}'!")
     else:
-        raise Exit("\nUnable to start {testy}.")
+        raise Exit(f"\nUnable to start {testy}.")
 
     # TODO: Start the crash service.
 
