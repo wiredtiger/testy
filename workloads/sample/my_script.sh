@@ -34,7 +34,7 @@ cloudwatch=$(aws cloudwatch put-metric-data --metric-name backup --dimensions In
 
 # Check if anything is already mounted. This means a backup is in progress.
 # ssh ubuntu@ec2-3-106-126-176.ap-southeast-2.compute.amazonaws.com 'ls /dev/xvdf1'
-if ls $mounting_point; then
+if ls $mounting_point > /dev/null; then
 # if [ $? == 0 ]; then
     echo "A backup is already in progress!"
     exit 1
