@@ -136,20 +136,20 @@ def start(c, workload):
         raise Exit("\nUnable to start {testy}.")
 
     # Start the backup service.
-    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    backup_dir = get_value(c, "application", "backup_dir")
+    # backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    # backup_dir = get_value(c, "application", "backup_dir")
 
-    # Create directories for each backup.
-    for i in range(1, 4):
-        create_directory(c, backup_dir + "/" + workload + "/" + str(i))
+    # # Create directories for each backup.
+    # for i in range(1, 4):
+    #     create_directory(c, backup_dir + "/" + workload + "/" + str(i))
 
-    service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
-    c.sudo(f"systemctl start {service}", user="root")
-    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
-        c.run(f"systemctl status {service}")
-        print(f"\nStarted {testy} backup service workload '{workload}'!")
-    else:
-        raise Exit("\nUnable to start {testy} backup service.")
+    # service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+    # c.sudo(f"systemctl start {service}", user="root")
+    # if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+    #     c.run(f"systemctl status {service}")
+    #     print(f"\nStarted {testy} backup service workload '{workload}'!")
+    # else:
+    #     raise Exit("\nUnable to start {testy} backup service.")
 
     # TODO: Start the crash service.
 
@@ -177,17 +177,17 @@ def stop(c):
         print(f"{testy} is not running.")
 
     # Stop backup service.
-    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+    # backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    # service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
 
-    if c.run(f"systemctl is-active {service}", hide=True, warn=True):
-        print(f"Stopping {testy} backup service. Please wait ...")
-        if c.sudo(f"systemctl stop {service}", user="root"):
-            print(f"{testy} stopped successfully.")
-        else:
-            raise Exit(f"Failed to stop {testy} backup service.")
-    else:
-        print(f"{testy} backup service is not running.")
+    # if c.run(f"systemctl is-active {service}", hide=True, warn=True):
+    #     print(f"Stopping {testy} backup service. Please wait ...")
+    #     if c.sudo(f"systemctl stop {service}", user="root"):
+    #         print(f"{testy} stopped successfully.")
+    #     else:
+    #         raise Exit(f"Failed to stop {testy} backup service.")
+    # else:
+    #     print(f"{testy} backup service is not running.")
 
     # TODO: Stop the crash service.
 
