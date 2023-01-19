@@ -20,6 +20,12 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 @task
 def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
+    # Get Linux distribution.
+    result = c.run("cat /etc/*-release", hide=True)
+    d = dict(line.split('=') for line in result.stdout.split('\n') if '=' in line)
+    release = d["PRETTY_NAME"].strip('\"')
+    print(f"Starting {testy} installation for {release} ...")
+
     # Read configuration file.
     config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
     config.read(c.testy_config)
@@ -39,7 +45,11 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     c.sudo(f"chown -R {user}:{user} {database_dir}")
 
     # Install prerequisite software.
-    install_packages(c)
+    install_packages(c, release)
+
+    # Add github to known_hosts.
+    c.run("touch ~/.ssh/known_hosts && ssh-keygen -R github.com && " \
+          "ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts", hide=True)
 
     # Clone repositories.
     for repo in [("testy", testy_branch), ("wiredtiger", wiredtiger_branch)]:
@@ -541,10 +551,12 @@ def build_wiredtiger(c, home_dir, build_dir, branch):
 
     return True
 
-# Install prerequisite software.
-def install_packages(c):
+# Install prerequisite software packages.
+def install_packages(c, release):
 
-    if c.run("which apt-get", warn=True, hide=True):
+    if c.run("which apt", warn=True, hide=True):
+        installer = "apt"
+    elif c.run("which apt-get", warn=True, hide=True):
         installer = "apt-get"
     elif c.run("which dnf", warn=True, hide=True):
         installer = "dnf --disableplugin=spacewalk"
@@ -553,32 +565,83 @@ def install_packages(c):
     else:
         raise Exit("Error: Unable to determine package installer.")
 
-    is_rpm = (installer != "apt-get")
-    packages = ["cmake", "ccache", "ninja-build", "python3-dev", "swig", "libarchive"]
     print("Installing required software packages ...", flush=True)
 
-    if is_rpm:
+    if release.startswith("Amazon Linux 2"):
+        c.sudo(f"{installer} -y update", warn=True, hide=True)
+        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
+        for package in packages:
+            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+        c.sudo("alternatives --install /usr/bin/gcc gcc /usr/bin/x86_64-redhat-linux-gcc10-gcc 20")
+        c.sudo("alternatives --install /usr/bin/g++ g++ /usr/bin/x86_64-redhat-linux-gcc10-g++ 20")
+
+        for package in ["pip", "cmake", "ninja"]:
+            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by pip.", flush=True)
+
+    elif release.startswith("Red Hat Enterprise Linux 8"):
+        c.sudo(f"{installer} -y update", warn=True, hide=True)
+        packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
+                    "swig", "libarchive"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
                     print(f" -- Package '{package}' is already the newest version.", flush=True)
                     continue
-            # Use --best to install the newest package version.
             if c.sudo(f"{installer} -y --best install {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' installed.", flush=True)
-    else:
-        c.sudo("{installer} update", warn=True, hide=True)
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+
+        for package in ["pip", "ninja"]:
+            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by pip.", flush=True)
+
+    elif release.startswith("Ubuntu 20") or release.startswith("Ubuntu 22"):
+        packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig"]
+        c.sudo(f"{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
                 continue
             if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' installed.", flush=True)
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
 
-    # Attempt to pip install ninja if it was not available through the package manager.
-    if not c.run("which ninja", warn=True, hide=True):
-        if c.sudo(f"python3 -m pip install ninja", warn=True, hide=True):
-            print(f" -- Package 'ninja' installed by pip.", flush=True)
+    elif release.startswith("Ubuntu 18"):
+        c.sudo("add-apt-repository ppa:ubuntu-toolchain-r/test", hide=True)
+        packages = ["cmake", "ccache", "gcc-11", "g++-11", "git", "ninja-build",
+                    "python3-dev", "swig"]
+        c.sudo(f"{installer} update", warn=True, hide=True)
+        for package in packages:
+            if c.run(f"dpkg -s {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+        c.sudo("update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 20")
+        c.sudo("update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-11 20")
+
+    elif release.startswith("CentOS Linux 7"):
+        c.sudo(f"{installer} -y update", warn=True, hide=True)
+        packages = ["centos-release-scl", "devtoolset-9-gcc", "devtoolset-9-gcc-c++", "git",
+                    "python3-devel", "libarchive"]
+        for package in packages:
+            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' is already the newest version.", flush=True)
+                continue
+            if c.sudo(f"{installer} -y install {package}", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by {installer}.", flush=True)
+        c.sudo("alternatives --install /usr/bin/gcc gcc /opt/rh/devtoolset-9/root/usr/bin/gcc 20")
+        c.sudo("alternatives --install /usr/bin/g++ g++ /opt/rh/devtoolset-9/root/usr/bin/g++ 20")
+
+        for package in ["pip", "cmake", "ninja", "swig"]:
+            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
+                print(f" -- Package '{package}' installed by pip.", flush=True)
+
+    else:
+        raise Exit(f"Package installation is not implemented for {release}.")
 
     print("Package installation complete!")
 

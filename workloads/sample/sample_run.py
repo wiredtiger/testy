@@ -66,6 +66,9 @@ delete_thread = Thread(delete_op)
 workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
      5*delete_thread)
 
+# Disable generation of stats.
+workload.options.report_enabled = False
+
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
 
