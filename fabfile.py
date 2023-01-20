@@ -71,6 +71,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     #       is complete, and add properties in .testy for the service filenames.
     install_service(c, config.get("testy", "testy_service"))
     install_service(c, config.get("testy", "backup_service"))
+    install_service(c, config.get("testy", "backup_timer"))
     #install_service(c, config.get("testy", "crash_service"))
 
     # Print installation summary on success.
@@ -684,6 +685,7 @@ def update_testy(c, branch):
     # Update services.
     install_service(c, get_value(c, "testy", "testy_service"))
     install_service(c, get_value(c, "testy", "backup_service"))
+    install_service(c, get_value(c, "testy", "backup_timer"))
     #install_service(c, get_value(c, "testy", "crash_service"))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")

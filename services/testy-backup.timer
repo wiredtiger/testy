@@ -1,5 +1,7 @@
 [Unit]
 Description="Timer for periodic backups"
+After=testy-run@.service
+Requires=testy-run@.service
 
 [Timer]
 OnUnitActiveSec=300s
