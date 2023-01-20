@@ -1,11 +1,12 @@
 [Unit]
 Description="Timer for periodic backups"
 After=testy-run@.service
-Requires=testy-run@.service
 
 [Timer]
-OnUnitActiveSec=300s
 OnBootSec=60s
+OnUnitActiveSec=300s
+Unit=testy-backup.service
 
 [Install]
 WantedBy=timers.target
+WantedBy=testy-run@.service

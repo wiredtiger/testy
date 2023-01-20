@@ -5,7 +5,6 @@ Documentation=https://github.com/wiredtiger/testy
 [Service]
 User=testy
 Group=testy
-Restart=no
 ExecStart=/bin/bash -c '${backup_dir}/backup.sh'
 TimeoutSec=3600s
 StandardOutput=journal+console
