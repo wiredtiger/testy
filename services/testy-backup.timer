@@ -1,6 +1,7 @@
 [Unit]
 Description="Timer for periodic backups"
 After=testy-run@.service
+BindsTo=testy-run@.service
 
 [Timer]
 OnBootSec=60s
