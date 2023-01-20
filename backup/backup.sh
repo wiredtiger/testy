@@ -35,7 +35,7 @@ main() {
     post_metric "backup" "backup" 1
 
     # Check if the virtual device is present. If it is, it can mean a backup is in progress or a volume has not been detached.
-    if ls $virtual_device > /dev/null; then
+    if ls $virtual_device 2> /dev/null; then
         echo "A backup is already in progress!"
         exit 1
     fi
