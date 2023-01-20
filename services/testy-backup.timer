@@ -1,0 +1,9 @@
+[Unit]
+Description="Timer for periodic backups"
+
+[Timer]
+OnUnitActiveSec=300s
+OnBootSec=60s
+
+[Install]
+WantedBy=timers.target
