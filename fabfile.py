@@ -136,8 +136,10 @@ def start(c, workload):
     if not c.run(f"test -f {wif}", warn=True):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
-    # First start the testy-run service which controls the long-running workload.
-    # The backup service is tied to the testy-run service.
+    # Start the testy-run service which manages the long-running
+    # workload and the start/stop behavior for the dependent testy-backup
+    # service. The testy-backup service is started after the testy-run service
+    # starts and is stopped when the testy-run service is stopped or fails.
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
     c.sudo(f"systemctl start {service}", user="root")
     if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
@@ -146,8 +148,6 @@ def start(c, workload):
         print(f"\nStarted {testy} running workload '{workload}'!")
     else:
         raise Exit(f"\nUnable to start {testy}.")
-
-    # TODO: Start the crash service.
 
 # Stop the testy framework, ensuring that all running processes complete gracefully
 # and WiredTiger is shut down cleanly.
@@ -171,8 +171,6 @@ def stop(c):
             raise Exit(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
-
-    # TODO: Stop the crash service.
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
