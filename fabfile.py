@@ -71,7 +71,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     #       is complete, and add properties in .testy for the service filenames.
     install_service(c, config.get("testy", "testy_service"))
     install_service(c, config.get("testy", "backup_service"))
-    install_service(c, config.get("testy", "backup_timer"))
+    install_service_timer(c, config.get("testy", "backup_timer"))
     #install_service(c, config.get("testy", "crash_service"))
 
     # Print installation summary on success.
@@ -623,8 +623,21 @@ def install_service(c, service):
         conf = get_systemd_service_conf(c, "environment")
         c.sudo(f"echo '{conf}' | sudo tee {conf_dir}/env.conf >/dev/null")
         c.sudo(f"cp {service} /etc/systemd/system")
-        c.sudo(f"systemctl disable {service_name}", hide=True)
-        c.sudo(f"systemctl enable {service_name}", hide=True)
+        c.sudo("systemctl daemon-reload")
+        print("done!")
+
+# Install a systemd timer.
+def install_service_timer(c, service_timer):
+
+    service_timer_name = Path(service_timer).name
+    print(f"Installing service timer '{service_timer_name}' ... ", end='', flush=True)
+    if not c.run(f"test -f {service_timer}", warn=True):
+        print("failed")
+        raise Exit(f"-- Unable to install '{service_timer}': File not found.")
+    else:
+        c.sudo(f"cp {service_timer} /etc/systemd/system")
+        c.sudo(f"systemctl disable {service_timer_name}", hide=True)
+        c.sudo(f"systemctl enable {service_timer_name}", hide=True)
         c.sudo("systemctl daemon-reload")
         print("done!")
 
@@ -686,7 +699,7 @@ def update_testy(c, branch):
     # Update services.
     install_service(c, get_value(c, "testy", "testy_service"))
     install_service(c, get_value(c, "testy", "backup_service"))
-    install_service(c, get_value(c, "testy", "backup_timer"))
+    install_service_timer(c, get_value(c, "testy", "backup_timer"))
     #install_service(c, get_value(c, "testy", "crash_service"))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
