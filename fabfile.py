@@ -160,7 +160,7 @@ def stop(c):
         print(f"\nUnable to stop {testy}: No workload is defined.")
         return
 
-    # Stop testy service.
+    # Stop testy service which also stops the testy-backup service.
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
 
@@ -172,6 +172,17 @@ def stop(c):
             raise Exit(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
+
+    # Stop backup timer.
+    backup_service_timer_name = Path(get_value(c, "testy", "backup_timer")).name
+    if c.run(f"systemctl is-active {backup_service_timer_name}", hide=True, warn=True):
+        print(f"Stopping timer {backup_service_timer_name}. Please wait ...")
+        if c.sudo(f"systemctl stop {backup_service_timer_name}", user="root"):
+            print(f"{backup_service_timer_name} stopped successfully.")
+        else:
+            raise Exit(f"Failed to stop {backup_service_timer_name}.")
+    else:
+        print(f"{backup_service_timer_name} is not running.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
