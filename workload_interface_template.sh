@@ -13,10 +13,6 @@ run() {
     echo "run(): Not yet implemented."
 }
 
-backup() {
-    echo "backup(): Not yet implemented."
-}
-
 validate() {
     echo "validate(): Not yet implemented."
 }

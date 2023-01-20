@@ -15,10 +15,6 @@ run() {
     python3 ${workload_dir}/sample/sample_run.py --home ${database_dir} --keep
 }
 
-backup() {
-    ${workload_dir}/sample/sample_backup.sh
-}
-
 validate() {
     echo "validate(): Not yet implemented."
 }
