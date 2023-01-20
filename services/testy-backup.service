@@ -1,8 +1,6 @@
 [Unit]
 Description="Backup service for testy"
 Documentation=https://github.com/wiredtiger/testy
-After=testy-run@%i.service
-BindsTo=testy-run@%i.service
 
 [Service]
 User=testy
@@ -12,6 +10,3 @@ ExecStart=/bin/bash -c '${backup_dir}/backup.sh'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console
-
-[Install]
-WantedBy=testy-run@%i.service
