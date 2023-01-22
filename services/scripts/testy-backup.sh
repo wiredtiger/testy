@@ -254,7 +254,8 @@ attach_volume() {
     local _device_name=$3
 
     # Attach the volume to the instance.
-    local _volume_state=$(aws ec2 attach-volume \
+    local _volume_state
+    _volume_state=$(aws ec2 attach-volume \
         --device "$_device_name" \
         --instance-id "$_instance_id" \
         --volume-id "$_volume_id" \
