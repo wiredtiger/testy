@@ -36,10 +36,10 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
     # Create framework directories.
     testy_dir = config.get("application", "testy_dir")
-    backup_dir = config.get("application", "backup_dir")
     database_dir = config.get("application", "database_dir")
+    service_script_dir = config.get("application", "service_script_dir")
 
-    for dir in [testy_dir, backup_dir, database_dir]:
+    for dir in [testy_dir, service_script_dir, database_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
     c.sudo(f"chown -R {user}:{user} {database_dir}")
@@ -59,6 +59,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     create_working_copy(c, config.get("testy", "home_dir") + f"/{c.testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
+    create_working_copy(c, config.get("testy", "service_script_dir"), testy_dir, user)
 
     # Build WiredTiger.
     wt_home_dir = config.get("wiredtiger", "home_dir")
@@ -83,7 +84,6 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     print(f"The testy workloads are found in '" +
           config.get("application", "workload_dir") + "'")
     print(f"The database directory is '{database_dir}'")
-    print(f"The database backup directory is '{backup_dir}'")
     print(f"The WiredTiger home directory is '{wt_home_dir}'")
     print(f"The WiredTiger build directory is '{wt_build_dir}'")
 
@@ -131,6 +131,9 @@ def start(c, workload):
         if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
             raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                         "change the workload.")
+    else
+        print(f"\nIgnoring start command. No workload is defined.")
+        return
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -157,10 +160,22 @@ def stop(c):
 
     workload = get_value(c, "application", "current_workload")
     if not workload:
-        print(f"\nUnable to stop {testy}: No workload is defined.")
+        print(f"\nIgnoring stop command. No workload is defined.")
         return
 
-    # Stop testy service which also stops the testy-backup service.
+    # Stop backup timer.
+    backup_timer_name = Path(get_value(c, "testy", "backup_timer")).name
+    backup_timer = f"$(systemd-escape --template {backup_timer_name} \"{workload}\")"
+    if c.run(f"systemctl is-active {backup_timer}", hide=True, warn=True):
+        c.sudo(f"systemctl stop {backup_timer}", user="root")
+
+    # Check if a backup is in progress.
+    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
+    backup_service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+    if c.run(f"systemctl is-active {backup_service}", hide=True, warn=True):
+        print(f"A backup is currently in progress.")
+
+    # Stop testy service.
     service_name = Path(get_value(c, "testy", "testy_service")).name
     service = f"$(systemd-escape --template {service_name} \"{workload}\")"
 
@@ -169,20 +184,9 @@ def stop(c):
         if c.sudo(f"systemctl stop {service}", user="root"):
             print(f"{testy} stopped successfully.")
         else:
-            raise Exit(f"Failed to stop {testy}.")
+            print(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
-
-    # Stop backup timer.
-    backup_service_timer_name = Path(get_value(c, "testy", "backup_timer")).name
-    if c.run(f"systemctl is-active {backup_service_timer_name}", hide=True, warn=True):
-        print(f"Stopping timer {backup_service_timer_name}. Please wait ...")
-        if c.sudo(f"systemctl stop {backup_service_timer_name}", user="root"):
-            print(f"{backup_service_timer_name} stopped successfully.")
-        else:
-            raise Exit(f"Failed to stop {backup_service_timer_name}.")
-    else:
-        print(f"{backup_service_timer_name} is not running.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -191,7 +195,8 @@ def restart(c, workload=None):
     # If there is no current workload, restart should not be called. Use start.
     current_workload = get_value(c, "application", "current_workload")
     if not current_workload:
-        raise Exit("Restart failed, no running workload. Please use 'fab start'.")
+        print(f"\nIgnoring restart command. No workload is defined.")
+        return
 
     # If no workload is specified, take the current workload. 
     if not workload:

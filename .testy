@@ -1,16 +1,18 @@
 [application]
-user             = testy
-testy_dir        = /srv/testy
-backup_dir       = ${testy_dir}/backup
-database_dir     = ${testy_dir}/data
-workload_dir     = ${testy_dir}/workloads
-current_workload =
+user               = testy
+testy_dir          = /srv/testy
+database_dir       = ${testy_dir}/data
+workload_dir       = ${testy_dir}/workloads
+service_script_dir = ${testy_dir}/scripts
+current_workload   =
 
 [testy]
-home_dir       = ${application:testy_dir}/framework
-script_dir     = ${home_dir}/scripts
-service_dir    = ${home_dir}/services
-workload_dir   = ${home_dir}/workloads
+home_dir           = ${application:testy_dir}/framework
+script_dir         = ${home_dir}/scripts
+service_dir        = ${home_dir}/services
+workload_dir       = ${home_dir}/workloads
+service_script_dir = ${home_dir}/services/scripts
+
 git_url        = git@github.com:wiredtiger/testy.git
 parse_script   = ${script_dir}/testy_parse.py
 unpack_script  = ${script_dir}/testy_unpack.py
@@ -25,7 +27,7 @@ build_dir = ${home_dir}/build
 git_url   = git@github.com:wiredtiger/wiredtiger.git
 
 [environment]
-backup_dir   = ${application:backup_dir}
-database_dir = ${application:database_dir}
-workload_dir = ${application:workload_dir}
-wt_build_dir = ${wiredtiger:build_dir}
+database_dir       = ${application:database_dir}
+workload_dir       = ${application:workload_dir}
+wt_build_dir       = ${wiredtiger:build_dir}
+service_script_dir = ${application:service_script_dir}

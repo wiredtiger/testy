@@ -1,0 +1,11 @@
+[Unit]
+Description="testy-backup: A database backup and validation service for the testy framework"
+Documentation=https://github.com/wiredtiger/testy
+
+[Service]
+User=testy
+Group=testy
+ExecStart=/bin/bash -c '${scripts_dir}/testy-backup.sh ${workload_dir}/%I/%I.sh'
+TimeoutSec=3600s
+StandardOutput=journal+console
+StandardError=journal+console
