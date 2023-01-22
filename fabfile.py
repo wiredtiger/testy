@@ -39,7 +39,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     database_dir = config.get("application", "database_dir")
     service_script_dir = config.get("application", "service_script_dir")
 
-    for dir in [testy_dir, service_script_dir, database_dir]:
+    for dir in [testy_dir, database_dir, service_script_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
     c.sudo(f"chown -R {user}:{user} {database_dir}")
@@ -131,7 +131,7 @@ def start(c, workload):
         if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
             raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                         "change the workload.")
-    else
+    else:
         print(f"\nIgnoring start command. No workload is defined.")
         return
 
