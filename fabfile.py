@@ -131,8 +131,7 @@ def start(c, workload):
         if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
             raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                         "change the workload.")
-    else:
-        print(f"\nIgnoring start command. No workload is defined.")
+    elif not workload:
         return
 
     # Verify the specified workload exists.
@@ -143,8 +142,8 @@ def start(c, workload):
     # Enable service timers.
     timer_name = Path(get_value(c, "testy", "backup_timer")).name
     timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
-    if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
-        printf("Failed to schedule backup service.")
+    if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
+        print("Failed to schedule backup service.")
     c.sudo("systemctl daemon-reload")
 
     # Start the testy-run service which manages the long-running
@@ -167,7 +166,7 @@ def stop(c):
 
     workload = get_value(c, "application", "current_workload")
     if not workload:
-        print(f"\nIgnoring stop command. No workload is defined.")
+        print(f"\nNothing to stop. No workload is defined.")
         return
 
     # Stop backup timer.
@@ -199,10 +198,10 @@ def stop(c):
 @task
 def restart(c, workload=None):
 
-    # If there is no current workload, restart should not be called. Use start.
+    # If there is no current workload and no specified workload, return.
     current_workload = get_value(c, "application", "current_workload")
-    if not current_workload:
-        print(f"\nIgnoring restart command. No workload is defined.")
+    if not current_workload and not workload:
+        print(f"No workload is defined. Please specify a workload.")
         return
 
     # If no workload is specified, take the current workload. 
@@ -252,7 +251,8 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
             # The update_testy function may fail after updating the remote configuration
             # file. Make sure the pre-update configuration values are restored on both
             # failure and success.
-            set_value(c, "application", "current_workload", workload)
+            if workload:
+                set_value(c, "application", "current_workload", workload)
 
     if wiredtiger_branch:
         try:
@@ -717,7 +717,7 @@ def update_testy(c, branch):
                         get_value(c, "application", "testy_dir"), user)
     create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
                         get_value(c, "application", "workload_dir"), user)
-    create_working_copy(c, get_value("testy", "service_script_dir")+ "/*",
+    create_working_copy(c, get_value(c, "testy", "service_script_dir") + "/*",
                         get_value(c, "application", "service_script_dir"), user)
 
     # Update services.
