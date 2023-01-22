@@ -27,7 +27,7 @@ build_dir = ${home_dir}/build
 git_url   = git@github.com:wiredtiger/wiredtiger.git
 
 [environment]
-database_dir       = ${application:database_dir}
-workload_dir       = ${application:workload_dir}
-wt_build_dir       = ${wiredtiger:build_dir}
-service_script_dir = ${application:service_script_dir}
+database_dir = ${application:database_dir}
+workload_dir = ${application:workload_dir}
+script_dir   = ${application:service_script_dir}
+wt_build_dir = ${wiredtiger:build_dir}

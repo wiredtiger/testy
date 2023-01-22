@@ -5,7 +5,7 @@ Documentation=https://github.com/wiredtiger/testy
 [Service]
 User=testy
 Group=testy
-ExecStart=/bin/bash -c '${scripts_dir}/testy-backup.sh ${workload_dir}/%I/%I.sh'
+ExecStart=/bin/bash -c '${script_dir}/testy-backup.sh ${workload_dir}/%I/%I.sh'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console

@@ -140,6 +140,13 @@ def start(c, workload):
     if not c.run(f"test -f {wif}", warn=True):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
+    # Enable service timers.
+    timer_name = Path(get_value(c, "testy", "backup_timer")).name
+    timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
+    if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
+        printf("Failed to schedule backup service.")
+    c.sudo("systemctl daemon-reload")
+
     # Start the testy-run service which manages the long-running
     # workload and the start/stop behavior for the dependent testy-backup
     # service. The testy-backup service is started after the testy-run service
@@ -653,7 +660,6 @@ def install_service_timer(c, service_timer):
     else:
         c.sudo(f"cp {service_timer} /etc/systemd/system")
         c.sudo(f"systemctl disable {service_timer_name}", hide=True)
-        c.sudo(f"systemctl enable {service_timer_name}", hide=True)
         c.sudo("systemctl daemon-reload")
         print("done!")
 
@@ -711,6 +717,8 @@ def update_testy(c, branch):
                         get_value(c, "application", "testy_dir"), user)
     create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
                         get_value(c, "application", "workload_dir"), user)
+    create_working_copy(c, get_value("testy", "service_script_dir")+ "/*",
+                        get_value(c, "application", "service_script_dir"), user)
 
     # Update services.
     install_service(c, get_value(c, "testy", "testy_service"))
