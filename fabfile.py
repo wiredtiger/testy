@@ -656,7 +656,7 @@ def install_aws_cli(c):
 
 def install_bash(c):
     print("Checking Bash version ...")
-    result=c.run("bash --version | head -1 | cut -d ' ' -f4", warn=True, hide=True)
+    result=c.run("/bin/bash --version | head -1 | cut -d ' ' -f4", warn=True, hide=True)
     if result and int(result.stdout[0]) >= 5:
         print("A compatible version of Bash is already installed.")
         return
@@ -668,12 +668,17 @@ def install_bash(c):
         c.run(f"curl -O http://ftp.gnu.org/gnu/bash/{bash_install}.tar.gz", warn=True, hide=True)
         c.run(f"tar xvf {bash_install}.tar.gz", warn=True, hide=True)
     with c.cd(f"/tmp/{bash_install}"):
-        c.run("./configure", warn=True, hide=False)
-        c.run("make", warn=True, hide=False)
-        if not c.run("sudo make install", warn=True, hide=False):
+        c.run("./configure", warn=True, hide=True)
+        c.run("make", warn=True, hide=True)
+        if not c.run("sudo make install", warn=True, hide=True):
             print("failed")
             raise Exit(f"-- Unable to install Bash {bash_install}.")
     c.run(f"rm -rf /tmp/{bash_install}")
+    c.run(f"rm -rf /tmp/{bash_install}.tar.gz")
+
+    # Update the binary.
+    c.sudo("mv /bin/bash /bin/bash.orig", warn=True)
+    c.sudo("ln -sf /usr/local/bin/bash /bin")
 
     print("Bash installed!")
 
