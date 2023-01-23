@@ -556,7 +556,7 @@ def install_packages(c, release):
 
     if release.startswith("Amazon Linux 2"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
+        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive", "unzip"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
@@ -573,7 +573,7 @@ def install_packages(c, release):
     elif release.startswith("Red Hat Enterprise Linux 8"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
         packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
-                    "swig", "libarchive"]
+                    "swig", "libarchive", "unzip"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
@@ -587,7 +587,8 @@ def install_packages(c, release):
                 print(f" -- Package '{package}' installed by pip.", flush=True)
 
     elif release.startswith("Ubuntu 20") or release.startswith("Ubuntu 22"):
-        packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig"]
+        packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig",
+                    "unzip"]
         c.sudo(f"{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
@@ -599,7 +600,7 @@ def install_packages(c, release):
     elif release.startswith("Ubuntu 18"):
         c.sudo("add-apt-repository ppa:ubuntu-toolchain-r/test", hide=True)
         packages = ["cmake", "ccache", "gcc-11", "g++-11", "git", "ninja-build",
-                    "python3-dev", "swig"]
+                    "python3-dev", "swig", "unzip"]
         c.sudo(f"{installer} update", warn=True, hide=True)
         for package in packages:
             if c.run(f"dpkg -s {package}", warn=True, hide=True):
@@ -613,7 +614,7 @@ def install_packages(c, release):
     elif release.startswith("CentOS Linux 7"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
         packages = ["centos-release-scl", "devtoolset-9-gcc", "devtoolset-9-gcc-c++", "git",
-                    "python3-devel", "libarchive"]
+                    "python3-devel", "libarchive", "unzip"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
@@ -630,7 +631,19 @@ def install_packages(c, release):
     else:
         raise Exit(f"Package installation is not implemented for {release}.")
 
+    install_aws_cli(c)
     print("Package installation complete!")
+
+# Install the latest AWS CLI.
+def install_aws_cli(c):
+    print("Installing AWS CLI ...")
+    archive_file="awscliv2.zip"
+    c.sudo(f"rm -f {archive_file}")
+    c.sudo(f"curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o {archive_file}", warn=True, hide=True)
+    c.sudo(f"unzip -o {archive_file}", warn=True, hide=True)
+    if not c.sudo("./aws/install", warn=True, hide=True):
+        print("failed")
+        raise Exit(f"-- Unable to AWS CLI.")
 
 # Install a systemd service.
 def install_service(c, service):
