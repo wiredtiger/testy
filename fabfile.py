@@ -632,6 +632,7 @@ def install_packages(c, release):
         raise Exit(f"Package installation is not implemented for {release}.")
 
     install_aws_cli(c)
+    install_bash(c)
     print("Package installation complete!")
 
 # Install the latest AWS CLI.
@@ -643,7 +644,31 @@ def install_aws_cli(c):
     c.sudo(f"unzip -o {archive_file}", warn=True, hide=True)
     if not c.sudo("./aws/install", warn=True, hide=True):
         print("failed")
-        raise Exit(f"-- Unable to install AWS CLI.")
+        raise Exit("-- Unable to install AWS CLI.")
+    print("AWS CLI installed!")
+
+def install_bash(c):
+    print("Checking Bash version ...")
+    result=c.run("bash --version | head -1 | cut -d ' ' -f4", warn=True, hide=True)
+    if result and int(result.stdout[0]) >= 5:
+        print("A compatible version of Bash is already installed.")
+        return
+
+    bash_install="bash-5.1.16"
+    print(f"Installing Bash version {bash_install} ...")
+
+    with c.cd("/tmp"):
+        c.run(f"curl -O http://ftp.gnu.org/gnu/bash/{bash_install}.tar.gz", warn=True, hide=True)
+        c.run(f"tar xvf {bash_install}.tar.gz", warn=True, hide=True)
+    with c.cd(f"/tmp/{bash_install}"):
+        c.run("./configure", warn=True, hide=False)
+        c.run("make", warn=True, hide=False)
+        if not c.run("sudo make install", warn=True, hide=False):
+            print("failed")
+            raise Exit(f"-- Unable to install Bash {bash_install}.")
+    c.run(f"rm -rf /tmp/{bash_install}")
+
+    print("Bash installed!")
 
 # Install a systemd service.
 def install_service(c, service):
