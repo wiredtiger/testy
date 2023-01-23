@@ -677,8 +677,7 @@ def install_bash(c):
     c.run(f"rm -rf /tmp/{bash_install}.tar.gz")
 
     # Update the binary.
-    c.sudo("mv /bin/bash /bin/bash.orig", warn=True)
-    c.sudo("ln -sf /usr/local/bin/bash /bin")
+    c.sudo("ln -sf /usr/local/bin/bash /bin/bash")
 
     print("Bash installed!")
 
