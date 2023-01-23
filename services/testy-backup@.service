@@ -1,5 +1,5 @@
 [Unit]
-Description="testy-backup: A database backup and validation service for the testy framework"
+Description="testy-backup: An AWS snapshot-based database backup and validation service"
 Documentation=https://github.com/wiredtiger/testy
 
 [Service]

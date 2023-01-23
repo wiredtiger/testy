@@ -1,5 +1,4 @@
 [Unit]
-Description="Timer for periodic backups"
 Description="testy-backup.timer: A database backup and validation scheduler for the testy framework"
 After=testy-run@%i.service
 
