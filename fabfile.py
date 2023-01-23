@@ -643,7 +643,7 @@ def install_aws_cli(c):
     c.sudo(f"unzip -o {archive_file}", warn=True, hide=True)
     if not c.sudo("./aws/install", warn=True, hide=True):
         print("failed")
-        raise Exit(f"-- Unable to AWS CLI.")
+        raise Exit(f"-- Unable to install AWS CLI.")
 
 # Install a systemd service.
 def install_service(c, service):
