@@ -638,13 +638,20 @@ def install_packages(c, release):
 # Install the latest AWS CLI.
 def install_aws_cli(c):
     print("Installing AWS CLI ...")
-    archive_file="awscliv2.zip"
-    c.sudo(f"rm -f {archive_file}")
-    c.sudo(f"curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o {archive_file}", warn=True, hide=True)
-    c.sudo(f"unzip -o {archive_file}", warn=True, hide=True)
-    if not c.sudo("./aws/install", warn=True, hide=True):
+
+    result=c.run("aws --version", warn=True, hide=True)
+    if result and result.stdout.startswith("aws-cli/2"):
+        print("AWS CLI 2.x is already installed.")
+        return
+
+    aws_cli_install="awscli-exe-linux-x86_64"
+    c.run(f"curl https://awscli.amazonaws.com/{aws_cli_install}.zip -o /tmp/{aws_cli_install}.zip", warn=True, hide=True)
+    c.run(f"unzip -o /tmp/{aws_cli_install}.zip -d /tmp/{aws_cli_install}", warn=True, hide=True)
+    if not c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True):
         print("failed")
         raise Exit("-- Unable to install AWS CLI.")
+    c.run(f"rm -rf /tmp/{aws_cli_install}")
+    c.run(f"rm -rf /tmp/{aws_cli_install}.zip")
     print("AWS CLI installed!")
 
 def install_bash(c):
