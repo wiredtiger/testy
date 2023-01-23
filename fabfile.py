@@ -570,6 +570,8 @@ def install_packages(c, release):
             if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
                 print(f" -- Package '{package}' installed by pip.", flush=True)
 
+        install_bash(c)
+
     elif release.startswith("Red Hat Enterprise Linux 8"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
         packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
@@ -628,11 +630,11 @@ def install_packages(c, release):
             if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
                 print(f" -- Package '{package}' installed by pip.", flush=True)
 
+        install_bash(c)
     else:
         raise Exit(f"Package installation is not implemented for {release}.")
 
     install_aws_cli(c)
-    install_bash(c)
     print("Package installation complete!")
 
 # Install the latest AWS CLI.
@@ -668,9 +670,8 @@ def install_bash(c):
         c.run(f"curl -O http://ftp.gnu.org/gnu/bash/{bash_install}.tar.gz", warn=True, hide=True)
         c.run(f"tar xvf {bash_install}.tar.gz", warn=True, hide=True)
     with c.cd(f"/tmp/{bash_install}"):
-        c.run("./configure", warn=True, hide=True)
-        c.run("make", warn=True, hide=True)
-        if not c.run("sudo make install", warn=True, hide=True):
+        c.run("./configure --prefix=/usr && make", warn=True, hide=True)
+        if not c.sudo("make install", warn=True, hide=True):
             print("failed")
             raise Exit(f"-- Unable to install Bash {bash_install}.")
     c.run(f"rm -rf /tmp/{bash_install}")
