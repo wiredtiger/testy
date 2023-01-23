@@ -136,7 +136,7 @@ create_snapshot() {
 
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
-	    "{Key=Name,Value=snapshot-backup}," \
+	    "{Key=Name,Value=testy-backup-snapshot}," \
 	    "{Key=Application,Value=testy}," \
 	    "{Key=Validation,Value=pending}]"
 
@@ -186,7 +186,7 @@ create_volume_from_snapshot() {
 
     # Create a volume using the snapshot.
     printf -v tags %s "ResourceType=volume, Tags=[" \
-	    "{Key=Name,Value=volume-backup}," \
+	    "{Key=Name,Value=testy-backup-volume}," \
 	    "{Key=Application,Value=testy}," \
         "{Key=Validation,Value=pending}]"
 
