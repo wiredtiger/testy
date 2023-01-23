@@ -50,7 +50,6 @@ main() {
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
     local _backup_volume_id
-    local _error_volume=0
     if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
