@@ -53,21 +53,14 @@ main() {
     local _error_volume=0
     if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
-        if attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name"; then
-            mount_device "${_device_name}1" "$_mount_point"
-        else
-            _error_volume=1
+        if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
+                mount_device "${_device_name}1" "$_mount_point" ); then
+            # Delete volume and exit on failure.
+            if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
+                echo "Deleted volume '$_backup_volume_id'."
+            fi
+            exit 1
         fi
-    else
-        _error_volume=1
-    fi
-
-    # Delete volume and exit on failure.
-    if [ $_error_volume != 0 ]; then
-        if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
-            echo "Deleted volume '$_backup_volume_id'."
-        fi
-        exit 1
     fi
 
     # Validate database. Update the snapshot status on success/failure.
