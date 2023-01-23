@@ -30,6 +30,7 @@ main() {
 
     if [ -z "$_volume_count" ]; then
         echo "Error: Unable to retrieve volumes for instance '$_instance_id'."
+        exit 1
     elif [ "$_volume_count" -eq 0 ]; then
         echo "Error: No volumes found for instance '$_instance_id'."
         exit 1
