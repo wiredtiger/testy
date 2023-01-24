@@ -487,8 +487,8 @@ def git_clone(c, git_url, local_dir, branch):
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
-        if c.run(f"git checkout {branch}", warn=True):
-            return c.run("git pull")
+        if c.run(f"git fetch && git checkout {branch} && git pull", warn=True):
+            return True
         return False
 
 # Create a working copy of a file or directory on the remote machine that can
