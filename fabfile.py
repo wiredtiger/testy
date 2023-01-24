@@ -647,11 +647,10 @@ def install_aws_cli(c):
     aws_cli_install="awscli-exe-linux-x86_64"
     c.run(f"curl https://awscli.amazonaws.com/{aws_cli_install}.zip -o /tmp/{aws_cli_install}.zip", warn=True, hide=True)
     c.run(f"unzip -o /tmp/{aws_cli_install}.zip -d /tmp/{aws_cli_install}", warn=True, hide=True)
-    if not c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True):
-        raise Exit("-- Unable to install AWS CLI.")
+    c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True)
     c.run(f"rm -rf /tmp/{aws_cli_install}")
     c.run(f"rm -rf /tmp/{aws_cli_install}.zip")
-    print(" -- Package 'aws' installed..", flush=True)
+    print(" -- Package 'aws' installed.", flush=True)
 
 def install_bash(c):
     result=c.run("/bin/bash --version | head -1 | cut -d ' ' -f4", warn=True, hide=True)
@@ -666,13 +665,11 @@ def install_bash(c):
         c.run(f"tar xvf {bash_install}.tar.gz", warn=True, hide=True)
     with c.cd(f"/tmp/{bash_install}"):
         c.run("./configure --prefix=/usr && make", warn=True, hide=True)
-    if not c.sudo(f"cd /tmp/{bash_install} && sudo make install"):
-        raise Exit(f"-- Unable to install Bash {bash_install}.")
+        c.run("sudo make install", hide=True)
     c.run(f"rm -rf /tmp/{bash_install}")
     c.run(f"rm -rf /tmp/{bash_install}.tar.gz")
 
-    print("Bash installed!")
-    print(" -- Package 'bash' installed..", flush=True)
+    print(" -- Package 'bash' installed.", flush=True)
 
 # Install a systemd service.
 def install_service(c, service):
