@@ -142,7 +142,6 @@ def start(c, workload):
     # Enable service timers.
     timer_name = Path(get_value(c, "testy", "backup_timer")).name
     timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
-    c.sudo(f"systemctl disable {timer}", hide=True, warn=True)
     if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
         print("Failed to schedule backup service.")
     c.sudo("systemctl daemon-reload")
@@ -194,6 +193,9 @@ def stop(c):
             print(f"Failed to stop {testy}.")
     else:
         print(f"{testy} is not running.")
+
+    # Disable the backup timer for the current workload.
+    c.sudo(f"systemctl disable {backup_timer}", hide=True, warn=True)
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
