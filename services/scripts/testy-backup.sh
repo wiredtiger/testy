@@ -53,7 +53,7 @@ main() {
     if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
-                mount_device "${_device_name}1" "$_mount_point" ); then
+                mount_device "$_instance_id" "${_device_name}1" "$_mount_point" ); then
             # Delete volume and exit on failure.
             if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
                 echo "Deleted volume '$_backup_volume_id'."
@@ -318,8 +318,9 @@ detach_volume() {
 # Mount the EBS volume exposed by the specified device name at the specified mount point.
 mount_device()
 {
-    local _device_name=$1
-    local _mount_point=$2
+    local _instance_id=$1
+    local _device_name=$2
+    local _mount_point=$3
 
     # Check that device is present.
     if ! test -b "$_device_name"; then
@@ -334,8 +335,23 @@ mount_device()
         fi
     fi
 
+    local _root_device
+    _root_device=$(aws ec2 describe-instances \
+        --instance-id "$_instance_id" \
+        --query "Reservations[*].Instances[*].RootDeviceName" \
+        --output text)
+
+    local _fs
+    _fs=$(blkid -o value -s TYPE "$_root_device")
+
+    local _mount_options="rw"
+    if [ "$_fs" == "xfs" ]; then
+        _mount_options+=",nouuid"
+    fi
+
     # Mount device.
-    if ( sudo mkdir -p "$_mount_point" && sudo mount -t auto -o nouuid "$_device_name" "$_mount_point" ); then
+    sudo mkdir -p "$_mount_point"
+    if sudo mount -t "$_fs" -o "$_mount_options" "$_device_name" "$_mount_point"; then
         sudo chown -R testy:testy "$_mount_point"
         return 0
     fi
