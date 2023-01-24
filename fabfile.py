@@ -639,32 +639,27 @@ def install_packages(c, release):
 
 # Install the latest AWS CLI.
 def install_aws_cli(c):
-    print("Installing AWS CLI ...")
-
     result=c.run("aws --version", warn=True, hide=True)
     if result and result.stdout.startswith("aws-cli/2"):
-        print("AWS CLI 2.x is already installed.")
+        print(" -- Package 'aws' is already compatible.", flush=True)
         return
 
     aws_cli_install="awscli-exe-linux-x86_64"
     c.run(f"curl https://awscli.amazonaws.com/{aws_cli_install}.zip -o /tmp/{aws_cli_install}.zip", warn=True, hide=True)
     c.run(f"unzip -o /tmp/{aws_cli_install}.zip -d /tmp/{aws_cli_install}", warn=True, hide=True)
     if not c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True):
-        print("failed")
         raise Exit("-- Unable to install AWS CLI.")
     c.run(f"rm -rf /tmp/{aws_cli_install}")
     c.run(f"rm -rf /tmp/{aws_cli_install}.zip")
-    print("AWS CLI installed!")
+    print(" -- Package 'aws' installed..", flush=True)
 
 def install_bash(c):
-    print("Checking Bash version ...")
     result=c.run("/bin/bash --version | head -1 | cut -d ' ' -f4", warn=True, hide=True)
     if result and int(result.stdout[0]) >= 5:
-        print("A compatible version of Bash is already installed.")
+        print(" -- Package 'bash' is already compatible.", flush=True)
         return
 
     bash_install="bash-5.1.16"
-    print(f"Installing Bash version {bash_install} ...")
 
     with c.cd("/tmp"):
         c.run(f"curl -O http://ftp.gnu.org/gnu/bash/{bash_install}.tar.gz", warn=True, hide=True)
@@ -672,7 +667,6 @@ def install_bash(c):
     with c.cd(f"/tmp/{bash_install}"):
         c.run("./configure --prefix=/usr && make", warn=True, hide=True)
         if not c.sudo("make install", warn=True, hide=True):
-            print("failed")
             raise Exit(f"-- Unable to install Bash {bash_install}.")
     c.run(f"rm -rf /tmp/{bash_install}")
     c.run(f"rm -rf /tmp/{bash_install}.tar.gz")
@@ -681,6 +675,7 @@ def install_bash(c):
     c.sudo("ln -sf /usr/local/bin/bash /bin/bash")
 
     print("Bash installed!")
+    print(" -- Package 'bash' installed..", flush=True)
 
 # Install a systemd service.
 def install_service(c, service):
