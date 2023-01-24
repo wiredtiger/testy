@@ -142,6 +142,7 @@ def start(c, workload):
     # Enable service timers.
     timer_name = Path(get_value(c, "testy", "backup_timer")).name
     timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
+    c.sudo(f"systemctl disable {timer}", hide=True, warn=True)
     if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
         print("Failed to schedule backup service.")
     c.sudo("systemctl daemon-reload")
@@ -698,8 +699,6 @@ def install_service_timer(c, service_timer):
         raise Exit(f"-- Unable to install '{service_timer}': File not found.")
     else:
         c.sudo(f"cp {service_timer} /etc/systemd/system")
-        c.sudo(f"systemctl disable {service_timer_name}", hide=True)
-        c.sudo("systemctl daemon-reload")
         print("done!")
 
 # Update the wiredtiger code on the remote machine to the specified branch, configure,
