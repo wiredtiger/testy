@@ -556,7 +556,7 @@ def install_packages(c, release):
 
     if release.startswith("Amazon Linux 2"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive", "unzip"]
+        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
