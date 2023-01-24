@@ -342,7 +342,7 @@ mount_device()
         --output text)
 
     local _fs
-    _fs=$(blkid -o value -s TYPE "$_root_device")
+    _fs=$(blkid -o value -s TYPE "$_root_device"1)
 
     local _mount_options="rw"
     if [ "$_fs" == "xfs" ]; then
