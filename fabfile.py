@@ -666,13 +666,10 @@ def install_bash(c):
         c.run(f"tar xvf {bash_install}.tar.gz", warn=True, hide=True)
     with c.cd(f"/tmp/{bash_install}"):
         c.run("./configure --prefix=/usr && make", warn=True, hide=True)
-        if not c.sudo("make install", warn=True, hide=True):
+        if not c.run("sudo make install"):
             raise Exit(f"-- Unable to install Bash {bash_install}.")
     c.run(f"rm -rf /tmp/{bash_install}")
     c.run(f"rm -rf /tmp/{bash_install}.tar.gz")
-
-    # Update the binary.
-    c.sudo("ln -sf /usr/local/bin/bash /bin/bash")
 
     print("Bash installed!")
     print(" -- Package 'bash' installed..", flush=True)
