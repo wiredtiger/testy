@@ -334,8 +334,16 @@ mount_device()
         fi
     fi
 
-    # Mount device.
-    if ( sudo mkdir -p "$_mount_point" && sudo mount "$_device_name" "$_mount_point" ); then
+    # Mount device. On CentOS and Amazon Linux, we need to specify the nouuid option to avoid the
+    # duplicate UUID error.
+    local release
+    local mount_options
+    release=$(cat /etc/*-release | grep PRETTY_NAME | cut -d'"' -f 2)
+    if [[ "$release" =~ ^Amazon\ Linux.*|^CentOS\ Linux\ 7.* ]]; then
+        mount_options="-t xfs -o nouuid"
+    fi
+
+    if ( sudo mkdir -p "$_mount_point" && sudo mount "$mount_options" "$_device_name" "$_mount_point" ); then
         sudo chown -R testy:testy "$_mount_point"
         return 0
     fi
