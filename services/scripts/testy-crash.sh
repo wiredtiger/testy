@@ -8,18 +8,8 @@ main() {
         exit 1
     fi
 
-    # Retrieve the Python process and send a SIGKILL.
-    if ! pgrep -U testy python &> /dev/null; then
-        echo "Failed to find running Python process."
-        exit 1
-    fi
-    local _python_pid
-    _python_pid=$(pgrep -U testy python)
-
-    if ! sudo kill -SIGKILL "$_python_pid"; then
-        echo "Failed to kill Python process $_python_pid"
-        exit 1
-    fi
+    # Kill all Python3 processes.
+    sudo killall -SIGKILL python3
 }
 
 # Run main function.
