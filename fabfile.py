@@ -68,8 +68,6 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
         raise Exit(f"Failed to build {wiredtiger} for branch '{wiredtiger_branch}'.")
 
     # Install services.
-    # TODO: Update this part of the installation when the service implementation
-    #       is complete, and add properties in .testy for the service filenames.
     install_service(c, config.get("testy", "testy_service"))
     install_service(c, config.get("testy", "backup_service"))
     install_service_timer(c, config.get("testy", "backup_timer"))
