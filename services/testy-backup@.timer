@@ -3,7 +3,9 @@ Description="testy-backup.timer: A database backup and validation scheduler for 
 After=testy-run@%i.service
 
 [Timer]
-OnUnitActiveSec=86400s
+OnActiveSec=3s
+OnUnitActiveSec=180s
+#OnUnitActiveSec=180s
 Unit=testy-backup@%i.service
 
 [Install]
