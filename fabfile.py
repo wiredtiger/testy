@@ -68,11 +68,12 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
         raise Exit(f"Failed to build {wiredtiger} for branch '{wiredtiger_branch}'.")
 
     # Install services.
-    install_service(c, config.get("testy", "testy_service"))
-    install_service(c, config.get("testy", "backup_service"))
-    install_service_timer(c, config.get("testy", "backup_timer"))
-    install_service(c, config.get("testy", "crash_service"))
-    install_service_timer(c, config.get("testy", "crash_timer"))
+    services = ["testy_service", "backup_service", "crash_service"]
+    for service in services:
+        install_service(c, config.get("testy", service))
+    timers = ["backup_timer", "crash_timer"]
+    for timer in timers:
+        install_service_timer(c, config.get("testy", timer))
 
     # Print installation summary on success.
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -772,10 +773,11 @@ def update_testy(c, branch):
                         get_value(c, "application", "service_script_dir"), user)
 
     # Update services.
-    install_service(c, get_value(c, "testy", "testy_service"))
-    install_service(c, get_value(c, "testy", "backup_service"))
-    install_service_timer(c, get_value(c, "testy", "backup_timer"))
-    install_service(c, get_value(c, "testy", "crash_service"))
-    install_service_timer(c, get_value(c, "testy", "crash_timer"))
+    services = ["testy_service", "backup_service", "crash_service"]
+    for service in services:
+        install_service(c, get_value("testy", service))
+    timers = ["backup_timer", "crash_timer"]
+    for timer in timers:
+        install_service_timer(c, get_value("testy", timer))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
