@@ -96,8 +96,8 @@ def populate(c, workload):
 
     # Is testy running already?
     if current_workload:
-        service = f"$(systemd-escape --template {service_name} \"{current_workload}\")"
-        if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        testy_service = get_service_instance_name(service_name, current_workload)
+        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
             raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
 
     # Verify the specified workload exists.
@@ -127,8 +127,8 @@ def start(c, workload):
 
     # Is testy running already?
     if current_workload:
-        service = f"$(systemd-escape --template {service_name} \"{current_workload}\")"
-        if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+        testy_service = get_service_instance_name(service_name, current_workload)
+        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
             raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                         "change the workload.")
     elif not workload:
@@ -140,9 +140,9 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # Enable service timers.
-    timer_name = Path(get_value(c, "testy", "backup_timer")).name
-    timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
-    if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
+    backup_timer = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
+    if not c.sudo(f"systemctl enable {backup_timer}", hide=True, warn=True):
         print("Failed to schedule backup service.")
     c.sudo("systemctl daemon-reload")
 
@@ -150,11 +150,11 @@ def start(c, workload):
     # workload and the start/stop behavior for the dependent testy-backup
     # service. The testy-backup service is started after the testy-run service
     # starts and is stopped when the testy-run service is stopped or fails.
-    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
-    c.sudo(f"systemctl start {service}", user="root")
-    if c.sudo(f"systemctl is-active {service}", hide=True, warn=True):
+    testy_service = get_service_instance_name(service_name, workload)
+    c.sudo(f"systemctl start {testy_service}", user="root")
+    if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
         set_value(c, "application", "current_workload", workload)
-        c.run(f"systemctl status {service}")
+        c.run(f"systemctl status {testy_service}")
         print(f"\nStarted {testy} running workload '{workload}'!")
     else:
         raise Exit(f"\nUnable to start {testy}.")
@@ -170,24 +170,24 @@ def stop(c):
         return
 
     # Stop backup timer.
-    backup_timer_name = Path(get_value(c, "testy", "backup_timer")).name
-    backup_timer = f"$(systemd-escape --template {backup_timer_name} \"{workload}\")"
+    backup_timer = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
     if c.run(f"systemctl is-active {backup_timer}", hide=True, warn=True):
         c.sudo(f"systemctl stop {backup_timer}", user="root")
 
     # Check if a backup is in progress.
-    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    backup_service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
+    backup_service = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_service")).name, workload)
     if c.run(f"systemctl is-active {backup_service}", hide=True, warn=True):
         print(f"A backup is currently in progress.")
 
     # Stop testy service.
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-    service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+    testy_service = get_service_instance_name(
+        Path(get_value(c, "testy", "testy_service")).name, workload)
 
-    if c.run(f"systemctl is-active {service}", hide=True, warn=True):
+    if c.run(f"systemctl is-active {testy_service}", hide=True, warn=True):
         print(f"Stopping {testy}. Please wait ...")
-        if c.sudo(f"systemctl stop {service}", user="root"):
+        if c.sudo(f"systemctl stop {testy_service}", user="root"):
             print(f"{testy} stopped successfully.")
         else:
             print(f"Failed to stop {testy}.")
@@ -372,9 +372,9 @@ def info(c):
     with open(os.devnull, "w") as f, redirect_stdout(f):
         testy_workload = workload(c)
 
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-    service = f"$(systemd-escape --template {service_name} \"{testy_workload}\")"
-    testy_status = c.run(f"systemctl is-active {service}", hide=True, warn=True)
+    testy_service = get_service_instance_name(
+        Path(get_value(c, "testy", "testy_service")).name, testy_workload)
+    testy_status = c.run(f"systemctl is-active {testy_service}", hide=True, warn=True)
 
     print(f"{wiredtiger} branch:  {wt_branch.stdout}"
           f"{wiredtiger} commit:  {wt_commit.stdout}"
@@ -385,11 +385,16 @@ def info(c):
           f"{testy} status:   {testy_status.stdout}")
 
     if testy_status:
-        c.run(f"systemctl status {service}")
+        c.run(f"systemctl status {testy_service}")
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
+
+# Return the systemd service name for the specified service template and instance.
+def get_service_instance_name(service_name, instance_name):
+
+    return service_name.replace("@", f"\@{instance_name}")
 
 # Return the value corresponding to the specified key from the specified section
 # of the remote testy configuration file.
