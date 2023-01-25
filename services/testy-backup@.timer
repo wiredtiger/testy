@@ -5,7 +5,6 @@ After=testy-run@%i.service
 [Timer]
 OnActiveSec=86400s
 OnUnitActiveSec=86400s
-Unit=testy-backup@%i.service
 
 [Install]
 WantedBy=timers.target
