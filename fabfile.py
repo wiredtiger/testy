@@ -573,11 +573,11 @@ def install_packages(c, release):
                 print(f" -- Package '{package}' installed by {installer}.", flush=True)
         for gcc in ["x86_64-redhat-linux-gcc10", "aarch64-redhat-linux-gcc10"]:
             if c.run(f"ls /usr/bin/{gcc}-gcc", warn=True, hide=True):
-                print(f"found {gcc}!")
                 c.sudo(f"alternatives --install /usr/bin/gcc gcc /usr/bin/{gcc}-gcc 20 \
                          --slave /usr/bin/ar ar /usr/bin/gcc10-ar \
                          --slave /usr/bin/ld ld /usr/bin/gcc10-ld")
                 c.sudo(f"alternatives --install /usr/bin/g++ g++ /usr/bin/{gcc}-g++ 20")
+                break
 
         for package in ["pip", "cmake", "ninja"]:
             if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
