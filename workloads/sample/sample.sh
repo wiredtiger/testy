@@ -1,5 +1,5 @@
 #! /bin/bash
-# Initial sample workload for use with the Testy framework.
+# Initial sample workload for use with the testy framework.
 
 describe() {
     echo "A sample workload for use with the testy framework."
