@@ -1,0 +1,11 @@
+[Unit]
+Description="testy-crash: A crash service for the testy framework"
+Documentation=https://github.com/wiredtiger/testy
+
+[Service]
+User=testy
+Group=testy
+ExecStart=/bin/bash -c '${script_dir}/testy-crash.sh ${workload_dir}/%I/%I.sh'
+TimeoutSec=3600s
+StandardOutput=journal+console
+StandardError=journal+console

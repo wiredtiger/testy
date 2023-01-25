@@ -73,7 +73,8 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     install_service(c, config.get("testy", "testy_service"))
     install_service(c, config.get("testy", "backup_service"))
     install_service_timer(c, config.get("testy", "backup_timer"))
-    #install_service(c, config.get("testy", "crash_service"))
+    install_service(c, config.get("testy", "crash_service"))
+    install_service_timer(c, config.get("testy", "crash_timer"))
 
     # Print installation summary on success.
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -140,10 +141,12 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # Enable service timers.
-    timer_name = Path(get_value(c, "testy", "backup_timer")).name
-    timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
-    if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
-        print("Failed to schedule backup service.")
+    for t in ["backup_timer", "crash_timer"]:
+        timer_name = Path(get_value(c, "testy", t)).name
+        timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
+        if not c.sudo(f"systemctl enable {timer}", hide=True, warn=True):
+            print(f"Failed to schedule {timer} service.")
+
     c.sudo("systemctl daemon-reload")
 
     # Start the testy-run service which manages the long-running
@@ -169,17 +172,21 @@ def stop(c):
         print(f"\nNothing to stop. No workload is defined.")
         return
 
-    # Stop backup timer.
-    backup_timer_name = Path(get_value(c, "testy", "backup_timer")).name
-    backup_timer = f"$(systemd-escape --template {backup_timer_name} \"{workload}\")"
-    if c.run(f"systemctl is-active {backup_timer}", hide=True, warn=True):
-        c.sudo(f"systemctl stop {backup_timer}", user="root")
+    # Stop service timers.
+    timers = ["backup_timer", "crash_timer"]
+    for t in timers:
+        timer_name = Path(get_value(c, "testy", t)).name
+        timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
+        if c.run(f"systemctl is-active {timer_name}", hide=True, warn=True):
+            c.sudo(f"systemctl stop {timer_name}", user="root")
 
-    # Check if a backup is in progress.
-    backup_service_name = Path(get_value(c, "testy", "backup_service")).name
-    backup_service = f"$(systemd-escape --template {backup_service_name} \"{workload}\")"
-    if c.run(f"systemctl is-active {backup_service}", hide=True, warn=True):
-        print(f"A backup is currently in progress.")
+    # Check if a backup or a crash is in progress.
+    services = ["backup_service", "crash_service"]
+    for s in services:
+        service_name = Path(get_value(c, "testy", s)).name
+        service = f"$(systemd-escape --template {service_name} \"{workload}\")"
+        if c.run(f"systemctl is-active {service}", hide=True, warn=True):
+            print(f"${service} is currently in progress.")
 
     # Stop testy service.
     service_name = Path(get_value(c, "testy", "testy_service")).name
@@ -194,8 +201,11 @@ def stop(c):
     else:
         print(f"{testy} is not running.")
 
-    # Disable the backup timer for the current workload.
-    c.sudo(f"systemctl disable {backup_timer}", hide=True, warn=True)
+    # Disable service timers for the current workload.
+    for t in timers:
+        timer_name = Path(get_value(c, "testy", t)).name
+        timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
+        c.sudo(f"systemctl disable {timer}", hide=True, warn=True)
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -764,6 +774,7 @@ def update_testy(c, branch):
     install_service(c, get_value(c, "testy", "testy_service"))
     install_service(c, get_value(c, "testy", "backup_service"))
     install_service_timer(c, get_value(c, "testy", "backup_timer"))
-    #install_service(c, get_value(c, "testy", "crash_service"))
+    install_service(c, get_value(c, "testy", "crash_service"))
+    install_service_timer(c, get_value(c, "testy", "crash_timer"))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
