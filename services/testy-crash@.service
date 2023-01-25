@@ -5,6 +5,7 @@ Documentation=https://github.com/wiredtiger/testy
 [Service]
 User=testy
 Group=testy
+Type=oneshot
 ExecStartPre=/bin/bash -c '${script_dir}/testy-crash.sh %I'
 ExecStart=/bin/bash -c '${script_dir}/testy-backup.sh ${workload_dir}/%I/%I.sh'
 ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
