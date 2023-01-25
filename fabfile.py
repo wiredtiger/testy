@@ -199,10 +199,10 @@ def stop(c):
         print(f"{testy} is not running.")
 
     # Disable service timers for the current workload.
-    for t in timers:
-        timer_name = Path(get_value(c, "testy", t)).name
-        timer = f"$(systemd-escape --template {timer_name} \"{workload}\")"
-        c.sudo(f"systemctl disable {timer}", hide=True, warn=True)
+    for timer in timers:
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", timer)).name, workload)
+        c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True)
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
