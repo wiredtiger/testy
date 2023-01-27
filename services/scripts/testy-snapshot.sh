@@ -1,13 +1,6 @@
 #!/bin/bash
 
 main() {
-    # TODO: Exit if the crash service is active.
-    # local _workload=$1
-    # if systemctl is-active --quiet testy-crash@"$_workload".service; then
-    #     echo "The crash service is currently running."
-    #     exit 1
-    # fi
-
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
     local _validation_script=${_mount_point}${1}
