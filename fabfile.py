@@ -762,9 +762,9 @@ def update_testy(c, branch):
     # Update services.
     services = ["testy_service", "backup_service", "crash_service"]
     for service in services:
-        install_service(c, get_value("testy", service))
+        install_service(c, get_value(c, "testy", service))
     timers = ["backup_timer", "crash_timer"]
     for timer in timers:
-        install_service_timer(c, get_value("testy", timer))
+        install_service_timer(c, get_value(c, "testy", timer))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")
