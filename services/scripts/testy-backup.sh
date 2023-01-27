@@ -50,12 +50,13 @@ main() {
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
     local _backup_volume_id
+    local _mount_device
     if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
-                mount_device "${_device_name}1" "$_mount_point" ); then
+                mount_device "$_mount_point" _mount_device ); then
             # Delete volume and exit on failure.
-            if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
+            if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
                 echo "Deleted volume '$_backup_volume_id'."
             fi
             exit 1
@@ -72,7 +73,7 @@ main() {
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
     # will keep the snapshot for debugging.
-    if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
+    if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
         echo "Deleted volume '$_backup_volume_id'."
     fi
 }
@@ -318,27 +319,29 @@ detach_volume() {
 # Mount the EBS volume exposed by the specified device name at the specified mount point.
 mount_device()
 {
-    local _device_name=$1
-    local _mount_point=$2
+    local _mount_point=$1
+    local -n __mount_device=$2
+
+    local _root_device
+    _root_device=$(findmnt -n -o SOURCE /)
+
+    local _fs
+    _fs=$(sudo blkid -o value -s TYPE "$_root_device")
+
+    __mount_device=$(sudo blkid -t TYPE="$_fs" -o list | awk '/not mounted/ { print $1 }')
 
     # Check that device is present.
-    if ! test -b "$_device_name"; then
-        echo "Error: '$_device_name' does not exist."
+    if [ -z "$__mount_device" ] || [ ! -b "$__mount_device" ]; then
+        echo "Error: Mount device not found."
         return 1
     fi
 
     # Check that mount point is not in use.
     if mountpoint "$_mount_point" &> /dev/null; then
-        if ! unmount_device "$_device_name" "$_mount_point"; then
+        if ! unmount_device "$_mount_point" "$__mount_device"; then
             return 1
         fi
     fi
-
-    local _fs_mount_pount
-    _fs_mount_pount=$(findmnt -n -o SOURCE /)
-
-    local _fs
-    _fs=$(blkid -o value -s TYPE "$_fs_mount_pount")
 
     local _mount_options="rw"
     if [ "$_fs" == "xfs" ]; then
@@ -347,20 +350,20 @@ mount_device()
 
     # Mount device.
     sudo mkdir -p "$_mount_point"
-    if sudo mount -t "$_fs" -o "$_mount_options" "$_device_name" "$_mount_point"; then
+    if sudo mount -t "$_fs" -o "$_mount_options" "$__mount_device" "$_mount_point"; then
         sudo chown -R testy:testy "$_mount_point"
         return 0
     fi
 
-    echo "Error: Failed to mount device '$_device_name'."
+    echo "Error: Failed to mount device '$__mount_device'."
     return 1
 }
 
 # Unmount the EBS volume exposed by the specified device name at the specified mount point.
 unmount_device()
 {
-    local _device_name=$1
-    local _mount_point=$2
+    local _mount_point=$1
+    local _mount_device=$2
 
     # Verify that the mount point is in use.
     if ! mountpoint "$_mount_point" &> /dev/null; then
@@ -369,14 +372,14 @@ unmount_device()
     fi
 
     # Check that device is present.
-    if ! test -b "$_device_name"; then
-        echo "Error: '$_device_name' does not exist."
+    if ! test -b "$_mount_device"; then
+        echo "Error: '$_mount_device' does not exist."
         return 1
     fi
 
     # Unmount device.
-    if ! sudo umount "$_device_name"; then
-        echo "Error: Failed to unmount device '$_device_name'."
+    if ! sudo umount "$_mount_device"; then
+        echo "Error: Failed to unmount device '$_mount_device'."
         return 1
     fi
 }
@@ -407,11 +410,11 @@ validate_database() {
 delete_volume() {
 
     local _volume_id=$1
-    local _device_name=$2
-    local _mount_point=$3
+    local _mount_point=$2
+    local _mount_device=$3
 
     # Unmount the device.
-    unmount_device "${_device_name}1" "$_mount_point"
+    unmount_device "$_mount_point" "$_mount_device"
 
     # Detach the volume.
     detach_volume "$_volume_id"
