@@ -5,6 +5,7 @@ Documentation=https://github.com/wiredtiger/testy
 [Service]
 User=testy
 Group=testy
+ExecStartPre=/bin/bash -c '(systemctl status testy-crash@%I.service | grep "Active: inactive") || (echo "Crash service is running, skipping backup..." && exit 1)'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup'
 TimeoutSec=3600s
 StandardOutput=journal+console
