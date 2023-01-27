@@ -11,6 +11,7 @@ main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
     local _validation_script=${_mount_point}${1}
+    local _calling_service=$2
 
     local _aws_endpoint
     local _instance_id
@@ -49,7 +50,7 @@ main() {
 
     # Create a snapshot backup of the root volume.
     local _backup_snapshot_id
-    if ! create_snapshot "$_instance_id" _backup_snapshot_id; then
+    if ! create_snapshot "$_instance_id" "$_calling_service" _backup_snapshot_id; then
         exit 1
     fi
     echo "Created backup snapshot '$_backup_snapshot_id'."
@@ -57,7 +58,7 @@ main() {
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
     local _backup_volume_id
-    if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
+    if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" "$_calling_service" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
                 mount_device "${_device_name}1" "$_mount_point" ); then
@@ -129,21 +130,22 @@ get_root_volume_id() {
 create_snapshot() {
 
     local _instance_id=$1
-    local -n __snapshot_id=$2
+    local _calling_service=$2
+    local -n __snapshot_id=$3
 
     local _root_volume_id
     get_root_volume_id "$_instance_id" _root_volume_id
 
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
-	    "{Key=Name,Value=testy-backup-snapshot}," \
+	    "{Key=Name,Value=${_calling_service}-snapshot}," \
 	    "{Key=Application,Value=testy}," \
 	    "{Key=Validation,Value=pending}]"
 
     __snapshot_id=$(aws ec2 create-snapshot \
         --volume-id "$_root_volume_id" \
         --tag-specifications "${tags}" \
-        --description "Database backup snapshot" \
+        --description "Database $_calling_service snapshot" \
         --query "SnapshotId" \
         --output text)
 
@@ -182,11 +184,12 @@ create_volume_from_snapshot() {
 
     local _snapshot_id=$1
     local _availability_zone=$2
-    local -n __snapshot_volume_id=$3
+    local _calling_service=$3
+    local -n __snapshot_volume_id=$4
 
     # Create a volume using the snapshot.
     printf -v tags %s "ResourceType=volume, Tags=[" \
-	    "{Key=Name,Value=testy-backup-volume}," \
+	    "{Key=Name,Value=${_calling_service}-volume}," \
 	    "{Key=Application,Value=testy}," \
         "{Key=Validation,Value=pending}]"
 
