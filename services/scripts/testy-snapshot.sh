@@ -138,7 +138,7 @@ create_snapshot() {
     __snapshot_id=$(aws ec2 create-snapshot \
         --volume-id "$_root_volume_id" \
         --tag-specifications "${tags}" \
-        --description "Database $_tag_name_prefix snapshot" \
+        --description "$_tag_name_prefix snapshot" \
         --query "SnapshotId" \
         --output text)
 
