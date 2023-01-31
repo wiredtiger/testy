@@ -6,12 +6,13 @@ Documentation=https://github.com/wiredtiger/testy
 User=testy
 Group=testy
 Type=oneshot
-ExecStartPre=/bin/bash -c '! systemctl is-active --quiet testy-backup@%I.service || (echo "Crash test deferred: Backup in progress." && exit 1)'
-ExecStartPre=/bin/bash -c 'if [ $(systemctl show --property MainPID --value testy-run@%I.service) == 0 ]; then echo "No active service matching \'testy-run@%I.service\' found, skipping scheduled crash." && exit 1; fi'
+ExecStartPre=/bin/bash -c '! systemctl is-active --quiet testy-backup@%I.service'
+ExecStartPre=/bin/bash -c 'systemctl is-active --quiet testy-run@%I.service'
 ExecStartPre=/bin/bash -c 'sudo pkill -P $(systemctl show --property MainPID --value testy-run@%I.service) --signal SIGKILL'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-crash'
 # The framework may have been requested to stop since the start of this service, make sure the timer is still active before proceeding with a restart.
-ExecStartPost=/bin/bash -c 'systemctl is-active testy-crash@%I.timer && sudo systemctl start testy-run@%I.service'
+ExecStartPost=/bin/bash -c 'systemctl is-active testy-crash@%I.timer'
+ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console
