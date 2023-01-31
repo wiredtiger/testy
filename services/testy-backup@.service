@@ -5,7 +5,8 @@ Documentation=https://github.com/wiredtiger/testy
 [Service]
 User=testy
 Group=testy
-ExecStartPre=/bin/bash -c '(systemctl status testy-crash@%I.service | grep -E "Active: inactive|failed") || (echo "Backup test deferred: Crash in progress." && exit 1)'
+# The crash service is of type oneshot, thus we cannot use the is-active command.
+ExecStartPre=/bin/bash -c 'systemctl status testy-crash@%I.service | grep -E "Active: inactive|failed"'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup'
 TimeoutSec=3600s
 StandardOutput=journal+console
