@@ -175,8 +175,7 @@ def stop(c):
     for timer in timers:
         timer_name = get_service_instance_name(
             Path(get_value(c, "testy", timer)).name, workload)
-        if c.run(f"systemctl is-active {timer_name}", hide=True, warn=True):
-            c.sudo(f"systemctl stop {timer_name}", user="root")
+        c.sudo(f"systemctl stop {timer_name}", user="root")
 
     # Check if a backup or a crash is in progress.
     for service in ["backup_service", "crash_service"]:
