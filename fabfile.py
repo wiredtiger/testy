@@ -182,7 +182,10 @@ def stop(c):
         service_name = get_service_instance_name(
             Path(get_value(c, "testy", service)).name, workload)
         if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-            print(f"${service_name} is currently in progress.")
+            service_action = "backup"
+            if service == "crash_service":
+                service_action = "crash"
+            print(f"A {service_action} is currently in progress. The {service_action} service  will stop on {service_action} completion.")
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -201,7 +204,11 @@ def stop(c):
     for timer in timers:
         timer_name = get_service_instance_name(
             Path(get_value(c, "testy", timer)).name, workload)
-        c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True)
+        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+            timer_action = "Backup"
+            if timer == "crash_timer":
+                timer_action = "Crash"
+            print(f"{timer_action} scheduling is disabled.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
