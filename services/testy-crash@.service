@@ -1,5 +1,5 @@
 [Unit]
-Description="testy-crash: A crash service for the testy framework"
+Description="testy-crash: A crash testing service for the testy framework"
 Documentation=https://github.com/wiredtiger/testy
 
 [Service]
@@ -8,7 +8,7 @@ Group=testy
 Type=oneshot
 ExecStartPre=/bin/bash -c '! systemctl is-active --quiet testy-backup@%I.service'
 ExecStartPre=/bin/bash -c 'systemctl is-active --quiet testy-run@%I.service'
-ExecStartPre=/bin/bash -c 'sudo pkill -P $(systemctl show --property MainPID --value testy-run@%I.service) --signal SIGKILL'
+ExecStart=/bin/bash -c 'sudo pkill -P $(systemctl show --property MainPID --value testy-run@%I.service) --signal SIGKILL'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-crash'
 # The framework may have been requested to stop since the start of this service, make sure the timer is still active before proceeding with a restart.
 ExecStartPost=/bin/bash -c 'systemctl is-active testy-crash@%I.timer'
