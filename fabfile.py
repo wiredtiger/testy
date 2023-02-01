@@ -171,21 +171,20 @@ def stop(c):
         return
 
     # Stop service timers.
-    timers = ["backup_timer", "crash_timer"]
-    for timer in timers:
+    for timer in ["backup_timer", "crash_timer"]:
         timer_name = get_service_instance_name(
             Path(get_value(c, "testy", timer)).name, workload)
         c.sudo(f"systemctl stop {timer_name}", user="root")
 
-    # Check if a backup or a crash is in progress.
-    for service in ["backup_service", "crash_service"]:
-        service_name = get_service_instance_name(
-            Path(get_value(c, "testy", service)).name, workload)
-        if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-            service_action = "backup"
-            if service == "crash_service":
-                service_action = "crash"
-            print(f"A {service_action} is currently in progress. The {service_action} service  will stop on {service_action} completion.")
+    # Check if services are still in progress.
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_service")).name, workload)
+    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+        print("A backup is currently in progress. The service will terminate when the backup completes.")
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_service")).name, workload)
+    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+        print("A crash test is currently in progress. The service will terminate when the crash test completes.")
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -201,14 +200,14 @@ def stop(c):
         print(f"{testy} is not running.")
 
     # Disable service timers for the current workload.
-    for timer in timers:
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", timer)).name, workload)
-        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-            timer_action = "Backup"
-            if timer == "crash_timer":
-                timer_action = "Crash"
-            print(f"{timer_action} scheduling is disabled.")
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Backup scheduling is disabled.")
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Crash test scheduling is disabled.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
