@@ -183,7 +183,8 @@ def stop(c):
         print("A backup is currently in progress. The service will terminate when the backup completes.")
     service_name = get_service_instance_name(
         Path(get_value(c, "testy", "crash_service")).name, workload)
-    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+    pid = c.run(f"systemctl show --property MainPID --value {service_name}", hide=True)
+    if pid.stdout.strip() != "0":
         print("A crash test is currently in progress. The service will terminate when the crash test completes.")
 
     # Stop testy service.
