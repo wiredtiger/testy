@@ -68,12 +68,12 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
         raise Exit(f"Failed to build {wiredtiger} for branch '{wiredtiger_branch}'.")
 
     # Install services.
-    # TODO: Update this part of the installation when the service implementation
-    #       is complete, and add properties in .testy for the service filenames.
-    install_service(c, config.get("testy", "testy_service"))
-    install_service(c, config.get("testy", "backup_service"))
-    install_service_timer(c, config.get("testy", "backup_timer"))
-    #install_service(c, config.get("testy", "crash_service"))
+    services = ["testy_service", "backup_service", "crash_service"]
+    for service in services:
+        install_service(c, config.get("testy", service))
+    timers = ["backup_timer", "crash_timer"]
+    for timer in timers:
+        install_service_timer(c, config.get("testy", timer))
 
     # Print installation summary on success.
     print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
@@ -140,10 +140,11 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # Enable service timers.
-    backup_timer = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_timer")).name, workload)
-    if not c.sudo(f"systemctl enable {backup_timer}", hide=True, warn=True):
-        print("Failed to schedule backup service.")
+    for timer in ["backup_timer", "crash_timer"]:
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", timer)).name, workload)
+        if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
+            print(f"Failed to schedule ${timer_name} service timer.")
     c.sudo("systemctl daemon-reload")
 
     # Start the testy-run service which manages the long-running
@@ -169,17 +170,22 @@ def stop(c):
         print(f"\nNothing to stop. No workload is defined.")
         return
 
-    # Stop backup timer.
-    backup_timer = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_timer")).name, workload)
-    if c.run(f"systemctl is-active {backup_timer}", hide=True, warn=True):
-        c.sudo(f"systemctl stop {backup_timer}", user="root")
+    # Stop service timers.
+    for timer in ["backup_timer", "crash_timer"]:
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", timer)).name, workload)
+        c.sudo(f"systemctl stop {timer_name}", user="root")
 
-    # Check if a backup is in progress.
-    backup_service = get_service_instance_name(
+    # Check if services are still in progress.
+    service_name = get_service_instance_name(
         Path(get_value(c, "testy", "backup_service")).name, workload)
-    if c.run(f"systemctl is-active {backup_service}", hide=True, warn=True):
-        print(f"A backup is currently in progress.")
+    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+        print("A backup is currently in progress. The service will terminate when the backup completes.")
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_service")).name, workload)
+    pid = c.run(f"systemctl show --property MainPID --value {service_name}", hide=True)
+    if pid.stdout.strip() != "0":
+        print("A crash test is currently in progress. The service will terminate when the crash test completes.")
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -194,8 +200,15 @@ def stop(c):
     else:
         print(f"{testy} is not running.")
 
-    # Disable the backup timer for the current workload.
-    c.sudo(f"systemctl disable {backup_timer}", hide=True, warn=True)
+    # Disable service timers for the current workload.
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Backup scheduling is disabled.")
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Crash test scheduling is disabled.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -753,9 +766,11 @@ def update_testy(c, branch):
                         get_value(c, "application", "service_script_dir"), user)
 
     # Update services.
-    install_service(c, get_value(c, "testy", "testy_service"))
-    install_service(c, get_value(c, "testy", "backup_service"))
-    install_service_timer(c, get_value(c, "testy", "backup_timer"))
-    #install_service(c, get_value(c, "testy", "crash_service"))
+    services = ["testy_service", "backup_service", "crash_service"]
+    for service in services:
+        install_service(c, get_value(c, "testy", service))
+    timers = ["backup_timer", "crash_timer"]
+    for timer in timers:
+        install_service_timer(c, get_value(c, "testy", timer))
 
     print(f"\nSuccessfully updated {testy} to branch '{branch}'.\n")

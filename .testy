@@ -18,6 +18,7 @@ parse_script   = ${script_dir}/testy_parse.py
 unpack_script  = ${script_dir}/testy_unpack.py
 testy_service  = ${service_dir}/testy-run@.service
 crash_service  = ${service_dir}/testy-crash@.service
+crash_timer    = ${service_dir}/testy-crash@.timer
 backup_service = ${service_dir}/testy-backup@.service
 backup_timer   = ${service_dir}/testy-backup@.timer
 
