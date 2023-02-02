@@ -21,6 +21,7 @@ main() {
     _instance_exists=$(aws ec2 describe-instances --instance-id "$_instance_id")
     if [ -z "$_instance_exists" ]; then
         echo "Error: Instance '$_instance_id' not found."
+        "${script_dir}"/testy-metrics.sh instance testy_error 1
         exit 1
     fi
 
@@ -31,19 +32,24 @@ main() {
 
     if [ -z "$_volume_count" ]; then
         echo "Error: Unable to retrieve volumes for instance '$_instance_id'."
+        "${script_dir}"/testy-metrics.sh volume testy_error 1
         exit 1
     elif [ "$_volume_count" -eq 0 ]; then
         echo "Error: No volumes found for instance '$_instance_id'."
+        "${script_dir}"/testy-metrics.sh volume testy_error 1
         exit 1
     elif [ "$_volume_count" -gt 1 ]; then
         echo "Error: Multiple volumes found for instance '$_instance_id'." \
              "A backup may be in progress."
+        "${script_dir}"/testy-metrics.sh volume testy_error 1
         exit 1
     fi
 
     # Create a snapshot backup of the root volume.
     local _backup_snapshot_id
     if ! create_snapshot "$_instance_id" "$_tag_name_prefix" _backup_snapshot_id; then
+        echo "Error: Unable to create a snapshot for instance '$_instance_id'."
+        "${script_dir}"/testy-metrics.sh snapshot testy_error 1
         exit 1
     fi
     echo "Created backup snapshot '$_backup_snapshot_id'."
@@ -59,22 +65,30 @@ main() {
             if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
                 echo "Deleted volume '$_backup_volume_id'."
             fi
+            "${script_dir}"/testy-metrics.sh volume testy_error 1
             exit 1
         fi
+    else
+        "${script_dir}"/testy-metrics.sh volume testy_error 1
+        exit 1
     fi
 
     # Validate database. Update the snapshot status on success/failure.
     echo "Running validation script '$_validation_script' on volume '$_backup_volume_id'."
     if validate_database "$_validation_script" "$_backup_snapshot_id" "$_backup_volume_id"; then
         echo "Successfully validated database backup snapshot '$_backup_snapshot_id'."
+        "${script_dir}"/testy-metrics.sh validation testy_error 0
     else
         echo "Validation failed for database backup snapshot '$_backup_snapshot_id'."
+        "${script_dir}"/testy-metrics.sh validation testy_error 1
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
     # will keep the snapshot for debugging.
     if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
         echo "Deleted volume '$_backup_volume_id'."
+    else
+        "${script_dir}"/testy-metrics.sh volume testy_error 1
     fi
 }
 
