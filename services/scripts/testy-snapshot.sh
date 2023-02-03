@@ -63,6 +63,7 @@ main() {
             exit 1
         fi
     else
+        echo "Error: Unable to create backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         exit 1
     fi
 
