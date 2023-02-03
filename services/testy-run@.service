@@ -7,6 +7,7 @@ User=testy
 Group=testy
 Restart=no
 ExecStart=/bin/bash -c '${workload_dir}/%I/%I.sh run'
+ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh workload_status $EXIT_STATUS'
 TimeoutSec=120s
 StandardOutput=journal+console
 StandardError=journal+console

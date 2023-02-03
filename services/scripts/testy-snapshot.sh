@@ -44,6 +44,7 @@ main() {
     # Create a snapshot backup of the root volume.
     local _backup_snapshot_id
     if ! create_snapshot "$_instance_id" "$_tag_name_prefix" _backup_snapshot_id; then
+        echo "Error: Unable to create a snapshot for instance '$_instance_id'."
         exit 1
     fi
     echo "Created backup snapshot '$_backup_snapshot_id'."
@@ -61,6 +62,9 @@ main() {
             fi
             exit 1
         fi
+    else
+        echo "Error: Unable to create backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
+        exit 1
     fi
 
     # Validate database. Update the snapshot status on success/failure.
