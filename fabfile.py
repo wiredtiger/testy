@@ -1,7 +1,7 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import os, re, configparser as cp
+import os, re, time, configparser as cp
 from fabric import task
 from pathlib import Path
 from invoke.exceptions import Exit
@@ -114,6 +114,99 @@ def populate(c, workload):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
+
+# Launch an AWS instance. If a snapshot id is provided, its data is mounted on the root volume.
+@task
+def launch(c, template_name = None, snapshot_id = None):
+
+    # If the template is not specified, print all the possible ones.
+    if not template_name:
+        result = c.run("aws ec2 describe-launch-templates --query 'LaunchTemplates[*].LaunchTemplateName' --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(f"Error: {result.stderr}")
+        if result.stdout:
+            print("Please specify a template among the ones belows using the --template-name option:")
+            print(result.stdout.strip())
+            return
+        else:
+            if result.stderr:
+                raise Exit(f"Error: {result.stderr}")
+            else:
+                raise Exit("No templates could be retrieved!")
+    else:
+        # Make sure the given template name exists.
+        result = c.run(f"aws ec2 describe-launch-templates --launch-template-names {template_name}", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(f"Error with the following template name '{template_name}': {result.stderr}")
+
+    # If a snapshot is provided, spawn an instance with the snapshot data on its root volume.
+    instance_id = None
+    if snapshot_id:
+        # Retrieve the architecture and the name from the snapshot's tags.
+        architecture_type = None
+        image_name = None
+        result = c.run(f"aws ec2 describe-snapshots --snapshot-ids {snapshot_id} --query \
+            'Snapshots[*].[Tags[?Key==`Architecture`].Value[],Tags[?Key==`Name`].Value[]]' \
+            --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(f"Error: {result.stderr}")
+        if result.stdout:
+            results = result.stdout.strip().split('\n')
+            if len(results) != 2:
+                raise Exit(f"Error: the architecture and the name of the snapshot could not be retrieved\n{result.stdout}")
+            architecture_type = results[0]
+            image_name = results[1]
+
+        # Register an image based on the snapshot.
+        result = c.run("aws ec2 register-image --name " + image_name + " --root-device-name \
+            /dev/xvda --block-device-mappings '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"" \
+            + snapshot_id + "\"}}]' --architecture " + architecture_type + " --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(f"Error: {result.stderr}")
+        image_id = result.stdout.strip()
+        print(f"Created image {image_id}")
+
+        # Create the instance using the template and the new image.
+        result = c.run(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
+            --image-id {image_id} --query Instances[*].InstanceId --output text", hide=True)
+        instance_id = result.stdout.strip()
+    # Otherwise, spawn an instance from the template.
+    else:
+        result = c.run(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
+            --query Instances[*].InstanceId --output text", hide=True)
+        instance_id = result.stdout.strip()
+
+    # TODO: Do we want to add tags (i.e name) to the new instance?
+    print(f"The new instance ID is {instance_id}")
+
+    # Wait for the instance to be ready and retrieve the hostname.
+    hostname = None
+    max_retries = 10
+    num_retry = 0
+    while not hostname and num_retry < max_retries:
+        result = c.run(f"aws ec2 describe-instances --instance-ids {instance_id} --query \
+            'Reservations[*].Instances[*].PublicDnsName' --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(f"Error: {result.stderr}")
+        if result.stdout:
+            hostname = result.stdout.strip()
+        num_retry += 1
+        time.sleep(5)
+
+    if not hostname and num_retry >= max_retries:
+        raise Exit(f"The hostname could not be retrieved. Please check on the AWS dashboard.")
+
+    # TODO retrieve user?
+    user = "[ubuntu|ec2-user]"
+    print(f"Connect to the new instance with: ssh {user}@{hostname}")
+
+    # Retrieve the data folder.
+    # TODO: This can be misleading if the fabfile has changed since the creation of the snapshot.
+    parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
+    parser.read(c.testy_config)
+    data_folder = parser.get("application", "database_dir")
+
+    print(f"The snapshot data is in the following folder: {data_folder}")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
