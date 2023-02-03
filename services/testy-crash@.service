@@ -13,7 +13,7 @@ ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh
 # The framework may have been requested to stop since the start of this service, make sure the timer is still active before proceeding with a restart.
 ExecStartPost=/bin/bash -c 'systemctl is-active testy-crash@%I.timer'
 ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
-ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_service $EXIT_STATUS'
+ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_test_status $EXIT_STATUS'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console

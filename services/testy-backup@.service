@@ -8,7 +8,7 @@ Group=testy
 # The crash service is of type oneshot, thus we cannot use the is-active command.
 ExecStartPre=/bin/bash -c 'test $(systemctl show --property MainPID --value testy-crash@%I.service) -eq 0'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup'
-ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_service $EXIT_STATUS'
+ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status $EXIT_STATUS'
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console
