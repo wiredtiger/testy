@@ -554,7 +554,8 @@ def install_packages(c, release):
     elif c.run("which apt-get", warn=True, hide=True):
         installer = "apt-get"
     elif c.run("which dnf", warn=True, hide=True):
-        installer = "dnf --disableplugin=spacewalk"
+        installer = "dnf"
+        #installer = "dnf --disableplugin=spacewalk"
     elif c.run("which yum", warn=True, hide=True):
         installer = "yum"
     else:
