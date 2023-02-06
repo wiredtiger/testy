@@ -1,0 +1,11 @@
+[Unit]
+Description="testy-crash.timer: A crash scheduler for the testy framework"
+After=testy-run@%i.service
+
+[Timer]
+OnActiveSec=43260s
+OnUnitActiveSec=86400s
+
+[Install]
+WantedBy=timers.target
+WantedBy=testy-run@%i.service

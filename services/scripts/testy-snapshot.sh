@@ -4,6 +4,7 @@ main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
     local _validation_script=${_mount_point}${1}
+    local _tag_name_prefix=$2
 
     local _aws_endpoint
     local _instance_id
@@ -42,7 +43,8 @@ main() {
 
     # Create a snapshot backup of the root volume.
     local _backup_snapshot_id
-    if ! create_snapshot "$_instance_id" _backup_snapshot_id; then
+    if ! create_snapshot "$_instance_id" "$_tag_name_prefix" _backup_snapshot_id; then
+        echo "Error: Unable to create a snapshot for instance '$_instance_id'."
         exit 1
     fi
     echo "Created backup snapshot '$_backup_snapshot_id'."
@@ -50,8 +52,8 @@ main() {
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
     local _backup_volume_id
-    local _mount_device
-    if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" _backup_volume_id; then
+    if create_volume_from_snapshot \
+      "$_backup_snapshot_id" "$_availability_zone" "$_tag_name_prefix" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
                 mount_device "$_mount_point" _mount_device ); then
@@ -61,6 +63,10 @@ main() {
             fi
             exit 1
         fi
+    else
+        echo "Error: Unable to create backup volume '$_backup_volume_id' " \
+             "from snapshot '$_backup_snapshot_id'."
+        exit 1
     fi
 
     # Validate database. Update the snapshot status on success/failure.
@@ -123,21 +129,22 @@ get_root_volume_id() {
 create_snapshot() {
 
     local _instance_id=$1
-    local -n __snapshot_id=$2
+    local _tag_name_prefix=$2
+    local -n __snapshot_id=$3
 
     local _root_volume_id
     get_root_volume_id "$_instance_id" _root_volume_id
 
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
-	    "{Key=Name,Value=testy-backup-snapshot}," \
+	    "{Key=Name,Value=${_tag_name_prefix}-snapshot}," \
 	    "{Key=Application,Value=testy}," \
 	    "{Key=Validation,Value=pending}]"
 
     __snapshot_id=$(aws ec2 create-snapshot \
         --volume-id "$_root_volume_id" \
         --tag-specifications "${tags}" \
-        --description "Database backup snapshot" \
+        --description "$_tag_name_prefix snapshot" \
         --query "SnapshotId" \
         --output text)
 
@@ -176,11 +183,12 @@ create_volume_from_snapshot() {
 
     local _snapshot_id=$1
     local _availability_zone=$2
-    local -n __snapshot_volume_id=$3
+    local _tag_name_prefix=$3
+    local -n __snapshot_volume_id=$4
 
     # Create a volume using the snapshot.
     printf -v tags %s "ResourceType=volume, Tags=[" \
-	    "{Key=Name,Value=testy-backup-volume}," \
+	    "{Key=Name,Value=${_tag_name_prefix}-volume}," \
 	    "{Key=Application,Value=testy}," \
         "{Key=Validation,Value=pending}]"
 
