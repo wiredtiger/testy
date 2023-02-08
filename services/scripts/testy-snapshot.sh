@@ -321,6 +321,7 @@ detach_volume() {
             --query "Volumes[*].State" \
             --output text)
         ((_wait_time+=_wait_interval))
+
     done
 }
     
@@ -330,27 +331,38 @@ mount_device()
     local _mount_point=$1
     local -n __mount_device=$2
 
+    # Get the root device.
     local _root_device
     _root_device=$(findmnt -n -o SOURCE /)
 
+    # Get the filesystem of the root device.
     local _fs
     _fs=$(sudo blkid -o value -s TYPE "$_root_device")
 
-    __mount_device=$(sudo blkid -t TYPE="$_fs" -o list | awk '/not mounted/ { print $1 }')
+    # Get all devices of this filesystem type.
+    local _devices
+    _devices=$(sudo blkid -t TYPE="$_fs" -o device)
+
+    # Find the unmounted device.
+    for device in ${_devices[@]}; do
+        if ! findmnt -n $device &> /dev/null; then
+             __mount_device=$device
+        fi
+    done
 
     # Check that device is present.
-    if [ -z "$__mount_device" ] || [ ! -b "$__mount_device" ]; then
-        echo "Error: Mount device not found."
+    if [ -z "$__mount_device" ]; then
+        echo "Error: No unmounted device found."
         return 1
     fi
 
     # Check that mount point is not in use.
     if mountpoint "$_mount_point" &> /dev/null; then
-        if ! unmount_device "$_mount_point" "$__mount_device"; then
-            return 1
-        fi
+        echo "Error: Mount point '$_mount_point' is in use."
+        return 1
     fi
 
+    # XFS file systems need a special mount option if the UUID is not present.
     local _mount_options="rw"
     if [ "$_fs" == "xfs" ]; then
         _mount_options+=",nouuid"
@@ -359,7 +371,6 @@ mount_device()
     # Mount device.
     sudo mkdir -p "$_mount_point"
     if sudo mount -t "$_fs" -o "$_mount_options" "$__mount_device" "$_mount_point"; then
-        sudo chown -R testy:testy "$_mount_point"
         return 0
     fi
 
@@ -380,7 +391,7 @@ unmount_device()
     fi
 
     # Check that device is present.
-    if ! test -b "$_mount_device"; then
+    if ! test -d "$_mount_device"; then
         echo "Error: '$_mount_device' does not exist."
         return 1
     fi
