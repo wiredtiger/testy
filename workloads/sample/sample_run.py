@@ -41,7 +41,6 @@ insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(
 insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
               Operation(Operation.OP_SLEEP, "60")
 insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
-insert_thread_query = Thread(txn(10*insert_op_1))
 
 # Perform updates at random using the pareto distribution. Make smaller updates more frequently
 # and large ones less frequently.
@@ -52,24 +51,23 @@ update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
 update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
             Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
 update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
-update_thread_query = Thread(txn(10*update_op_1))
 
-# Insert single read
+# Insert single read.
 read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
           Operation(Operation.OP_SLEEP, "10")
 read_thread = Thread(read_op)
-read_thread_query = Thread(txn(10*read_op))
 
-# Insert single delete
+# Insert single delete.
 delete_op = Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1)) + \
 Operation(Operation.OP_SLEEP, "10")
 delete_thread = Thread(delete_op)
-delete_thread_query = Thread(txn(10*delete_op))
+
+# Queries.
+txn_thread = Thread(txn(2*insert_op_1) + txn(2*update_op_1) +  txn(2*delete_op) +  txn(1*read_op))
 
 # Define the workload operations.
 workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
-          5*delete_thread + insert_thread_query + update_thread_query + read_thread_query + \
-          delete_thread_query)
+          5*delete_thread + txn_thread)
 
 # Disable generation of stats.
 workload.options.report_enabled = False
