@@ -2,11 +2,12 @@
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
 import os, re, time, configparser as cp
-from fabric import task
-from pathlib import Path
+from contextlib import redirect_stdout
+from invoke import run as local
 from invoke.exceptions import Exit
 from invocations.console import confirm
-from contextlib import redirect_stdout
+from fabric import task
+from pathlib import Path
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
@@ -121,7 +122,7 @@ def launch(c, template_name = None, snapshot_id = None):
 
     # If the template is not specified, print all the possible ones.
     if not template_name:
-        result = c.run("aws ec2 describe-launch-templates --query 'LaunchTemplates[*].LaunchTemplateName' --output text", hide=True, warn=True)
+        result = local("aws ec2 describe-launch-templates --query 'LaunchTemplates[*].LaunchTemplateName' --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(f"Error: {result.stderr}")
         if result.stdout:
@@ -135,7 +136,7 @@ def launch(c, template_name = None, snapshot_id = None):
                 raise Exit("No templates could be retrieved!")
     else:
         # Make sure the given template name exists.
-        result = c.run(f"aws ec2 describe-launch-templates --launch-template-names {template_name}", hide=True, warn=True)
+        result = local(f"aws ec2 describe-launch-templates --launch-template-names {template_name}", hide=True, warn=True)
         if result.stderr:
             raise Exit(f"Error with the following template name '{template_name}': {result.stderr}")
 
@@ -145,7 +146,7 @@ def launch(c, template_name = None, snapshot_id = None):
         # Retrieve the architecture and the name from the snapshot's tags.
         architecture_type = None
         image_name = None
-        result = c.run(f"aws ec2 describe-snapshots --snapshot-ids {snapshot_id} --query \
+        result = local(f"aws ec2 describe-snapshots --snapshot-ids {snapshot_id} --query \
             'Snapshots[*].[Tags[?Key==`Architecture`].Value[],Tags[?Key==`Name`].Value[]]' \
             --output text", hide=True, warn=True)
         if result.stderr:
@@ -158,7 +159,7 @@ def launch(c, template_name = None, snapshot_id = None):
             image_name = results[1]
 
         # Register an image based on the snapshot.
-        result = c.run("aws ec2 register-image --name " + image_name + " --root-device-name \
+        result = local("aws ec2 register-image --name " + image_name + " --root-device-name \
             /dev/xvda --block-device-mappings '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"" \
             + snapshot_id + "\"}}]' --architecture " + architecture_type + " --output text", hide=True, warn=True)
         if result.stderr:
@@ -167,12 +168,12 @@ def launch(c, template_name = None, snapshot_id = None):
         print(f"Created image {image_id}")
 
         # Create the instance using the template and the new image.
-        result = c.run(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
+        result = local(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
             --image-id {image_id} --query Instances[*].InstanceId --output text", hide=True)
         instance_id = result.stdout.strip()
     # Otherwise, spawn an instance from the template.
     else:
-        result = c.run(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
+        result = local(f"aws ec2 run-instances --launch-template LaunchTemplateName={template_name} \
             --query Instances[*].InstanceId --output text", hide=True)
         instance_id = result.stdout.strip()
 
@@ -184,7 +185,7 @@ def launch(c, template_name = None, snapshot_id = None):
     max_retries = 10
     num_retry = 0
     while not hostname and num_retry < max_retries:
-        result = c.run(f"aws ec2 describe-instances --instance-ids {instance_id} --query \
+        result = local(f"aws ec2 describe-instances --instance-ids {instance_id} --query \
             'Reservations[*].Instances[*].PublicDnsName' --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(f"Error: {result.stderr}")
