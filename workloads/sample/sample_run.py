@@ -27,6 +27,7 @@
 # OTHER DEALINGS IN THE SOFTWARE.
 
 from sample_common import *
+from runner import *
 
 # Set up the WiredTiger connection.
 context = Context()
