@@ -391,7 +391,7 @@ unmount_device()
     fi
 
     # Check that device is present.
-    if ! test -d "$_mount_device"; then
+    if ! test -b "$_mount_device"; then
         echo "Error: '$_mount_device' does not exist."
         return 1
     fi

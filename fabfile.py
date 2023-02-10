@@ -577,7 +577,8 @@ def install_packages(c, release):
 
     if release.startswith("Amazon Linux 2"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
+        packages = ["gcc10", "gcc10-c++", "git", "libarchive", "python3-devel", "swig",
+                    "unzip"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
@@ -653,6 +654,10 @@ def install_aws_cli(c):
         return
 
     aws_cli_install="awscli-exe-linux-x86_64"
+    result=c.run("uname -m", warn=True, hide=True)
+    if result and (result.stdout.startswith("aarch") or result.stdout.startswith("arm")):
+        aws_cli_install="awscli-exe-linux-aarch64.zip"
+
     c.run(f"curl https://awscli.amazonaws.com/{aws_cli_install}.zip -o /tmp/{aws_cli_install}.zip", warn=True, hide=True)
     c.run(f"unzip -o /tmp/{aws_cli_install}.zip -d /tmp/{aws_cli_install}", warn=True, hide=True)
     c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True)
