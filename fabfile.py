@@ -180,12 +180,16 @@ def stop(c):
     service_name = get_service_instance_name(
         Path(get_value(c, "testy", "backup_service")).name, workload)
     if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-        print("A backup is currently in progress. The service will terminate when the backup completes.")
+        print("A backup is currently in progress. The service will terminate when the " \
+              "backup completes.")
     service_name = get_service_instance_name(
         Path(get_value(c, "testy", "crash_service")).name, workload)
-    pid = c.run(f"systemctl show --property MainPID --value {service_name}", hide=True)
-    if pid.stdout.strip() != "0":
-        print("A crash test is currently in progress. The service will terminate when the crash test completes.")
+    result = c.run(
+        f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
+        hide=True)
+    if result.stdout.strip() != "0":
+        print("A crash test is currently in progress. The service will terminate when " \
+              "the crash test completes.")
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -567,7 +571,7 @@ def install_packages(c, release):
     elif c.run("which apt-get", warn=True, hide=True):
         installer = "apt-get"
     elif c.run("which dnf", warn=True, hide=True):
-        installer = "dnf --disableplugin=spacewalk"
+        installer = "dnf"
     elif c.run("which yum", warn=True, hide=True):
         installer = "yum"
     else:
@@ -577,7 +581,8 @@ def install_packages(c, release):
 
     if release.startswith("Amazon Linux 2"):
         c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["gcc10", "gcc10-c++", "git", "python3-devel", "swig", "libarchive"]
+        packages = ["gcc10", "gcc10-c++", "git", "libarchive", "python3-devel", "swig",
+                    "unzip"]
         for package in packages:
             if c.run(f"{installer} list installed {package}", warn=True, hide=True):
                 print(f" -- Package '{package}' is already the newest version.", flush=True)
@@ -652,12 +657,17 @@ def install_aws_cli(c):
         print(" -- Package 'aws' is already compatible.", flush=True)
         return
 
-    aws_cli_install="awscli-exe-linux-x86_64"
-    c.run(f"curl https://awscli.amazonaws.com/{aws_cli_install}.zip -o /tmp/{aws_cli_install}.zip", warn=True, hide=True)
-    c.run(f"unzip -o /tmp/{aws_cli_install}.zip -d /tmp/{aws_cli_install}", warn=True, hide=True)
-    c.sudo(f"/tmp/{aws_cli_install}/aws/install", warn=True, hide=True)
-    c.run(f"rm -rf /tmp/{aws_cli_install}")
-    c.run(f"rm -rf /tmp/{aws_cli_install}.zip")
+    aws_cli="awscli-exe-linux-x86_64"
+    result=c.run("uname -m", warn=True, hide=True)
+    if result and (result.stdout.startswith("aarch") or result.stdout.startswith("arm")):
+        aws_cli="awscli-exe-linux-aarch64"
+
+    c.run(f"curl https://awscli.amazonaws.com/{aws_cli}.zip -o /tmp/{aws_cli}.zip",
+        warn=True, hide=True)
+    c.run(f"unzip -o /tmp/{aws_cli}.zip -d /tmp/{aws_cli}", warn=True, hide=True)
+    c.sudo(f"/tmp/{aws_cli}/aws/install", warn=True, hide=True)
+    c.run(f"rm -rf /tmp/{aws_cli}")
+    c.run(f"rm -rf /tmp/{aws_cli}.zip")
     print(" -- Package 'aws' installed.", flush=True)
 
 def install_bash(c):
