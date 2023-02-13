@@ -116,7 +116,7 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
-# Spawn an AWS instance and install testy.
+# Launch an AWS instance and install testy.
 @task
 def launch(c, platform = None, wiredtiger_branch="develop", testy_branch="main"):
     
@@ -128,7 +128,7 @@ def launch(c, platform = None, wiredtiger_branch="develop", testy_branch="main")
     #     with Connection(host) as c:
     #         install(c, wiredtiger_branch, testy_branch)
 
-# Spawn an AWS instance using a snapshot.
+# Launch an AWS instance using a snapshot.
 @task
 def launch_snapshot(c, snapshot_id = None):
     testy_launch_snapshot(snapshot_id)
