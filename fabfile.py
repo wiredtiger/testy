@@ -660,7 +660,7 @@ def install_aws_cli(c):
     aws_cli="awscli-exe-linux-x86_64"
     result=c.run("uname -m", warn=True, hide=True)
     if result and (result.stdout.startswith("aarch") or result.stdout.startswith("arm")):
-        aws_clii="awscli-exe-linux-aarch64"
+        aws_cli="awscli-exe-linux-aarch64"
 
     c.run(f"curl https://awscli.amazonaws.com/{aws_cli}.zip -o /tmp/{aws_cli}.zip",
         warn=True, hide=True)
