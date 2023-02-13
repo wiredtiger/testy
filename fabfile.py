@@ -1,13 +1,13 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import os, re, time, configparser as cp
+import os, re, configparser as cp
 from contextlib import redirect_stdout
-from invoke import run as local
 from invoke.exceptions import Exit
 from invocations.console import confirm
-from fabric import task
+from fabric import Connection, task
 from pathlib import Path
+from scripts.testy_launch import testy_launch, testy_launch_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
@@ -116,147 +116,22 @@ def populate(c, workload):
     else:
         print(f"populate failed for workload '{workload}'")
 
-# Launch an AWS instance. If a snapshot id is provided, its data is mounted on the root volume.
-# TODO - Two functions
+# Spawn an AWS instance and install testy.
 @task
-def launch(c, template_name = None, snapshot_id = None):
+def launch(c, platform = None, wiredtiger_branch="develop", testy_branch="main"):
+    
+    user, hostname = testy_launch(platform)
+    print(user, hostname)
+    # TODO - The following lines do not work.
+    # if user and hostname:
+    #     host = f"{user}@{hostname}"
+    #     with Connection(host) as c:
+    #         install(c, wiredtiger_branch, testy_branch)
 
-    # Print usage.
-    if (template_name and snapshot_id) or (not template_name and not snapshot_id):
-        print("Use the --template_name argument to spawn an instance. All the available options are:")
-        result = local("aws ec2 describe-launch-templates \
-            --query 'LaunchTemplates[*].LaunchTemplateName' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            print(f"Error: {result.stderr}")
-        if result.stdout:
-            print(result.stdout.strip())
-        print("Use the --snapshot_id argument to spawn an instance with the snapshot's data attached to the root volume.")
-        return
-
-    instance_id = None
-    if template_name:
-        # Make sure the given template name exists.
-        result = local(f"aws ec2 describe-launch-templates\
-            --launch-template-names {template_name}", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error with the following template name '{template_name}': {result.stderr}")
-        # Spawn an instance from the template.
-        result = local(f"aws ec2 run-instances \
-            --launch-template LaunchTemplateName={template_name} \
-            --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}]' \
-            --query Instances[*].InstanceId --output text", hide=True, warn=True)
-        if result.stderr:
-            print(f"Error: {result.stderr}")
-        instance_id = result.stdout.strip()
-
-    elif snapshot_id:
-        # Retrieve the template from the snapshot's tags.
-        result = local(f"aws ec2 describe-snapshots \
-            --snapshot-ids {snapshot_id} \
-            --query 'Snapshots[*].Tags[?Key==`Template_Name`].Value[]' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-        template_name = result.stdout.strip()
-        print(f"template_name is {template_name}")
-
-        # Retrieve the architecture from the template.
-        result = local(f"aws ec2 describe-launch-templates \
-            --launch-template-name {template_name} \
-            --query 'LaunchTemplates[*].Tags[?Key==`Architecture`].Value[]' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-        architecture_type = result.stdout.strip()
-        print(f"architecture_type is {architecture_type}")
-
-        # TODO - What to use for the image name?
-        image_name = f"{template_name}-{snapshot_id}"
-
-        # Check if this AMI already exists.
-        image_id = None
-        result = local(f"aws ec2 describe-images \
-            --filters \"Name=name,Values={image_name}\" \
-            --query 'Images[*].ImageId' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-        image_id = result.stdout.strip()
-
-        if not image_id:
-            # Register an image based on the snapshot and mount the snapshot's data on the root volume.
-            result = local("aws ec2 register-image \
-                --name " + image_name + " \
-                --root-device-name /dev/xvda \
-                --block-device-mappings '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"" + snapshot_id + "\"}}]' \
-                --architecture " + architecture_type + " \
-                --output text", hide=True, warn=True)
-            if result.stderr:
-                raise Exit(f"Error: {result.stderr}")
-            image_id = result.stdout.strip()
-
-        print(f"Image {image_id}")
-
-        # Create the instance using the template and the new image.
-        result = local(f"aws ec2 run-instances \
-            --launch-template LaunchTemplateName={template_name} \
-            --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}]' \
-            --image-id {image_id} --query Instances[*].InstanceId --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-        instance_id = result.stdout.strip()
-
-        # We can now deregister the image.
-        result = local(f"aws ec2 deregister-image \
-            --image-id {image_id}", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-
-    # TODO: Do we want to add tags (i.e name) to the new instance?
-    print(f"The new instance ID is {instance_id}")
-
-    # Wait for the instance to be ready and retrieve the hostname.
-    hostname = None
-    max_retries = 10
-    num_retry = 0
-    while not hostname and num_retry < max_retries:
-        result = local(f"aws ec2 describe-instances \
-            --instance-ids {instance_id} \
-            --query 'Reservations[*].Instances[*].PublicDnsName' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(f"Error: {result.stderr}")
-        if result.stdout:
-            hostname = result.stdout.strip()
-        num_retry += 1
-        time.sleep(5)
-
-    if not hostname and num_retry >= max_retries:
-        print(f"The hostname could not be retrieved. Please check on the AWS dashboard.")
-
-    # Retrieve the default user from the template.
-    user = None
-    result = local(f"aws ec2 describe-launch-templates \
-        --launch-template-name {template_name} \
-        --query 'LaunchTemplates[*].Tags[?Key==`User`].Value[]' \
-        --output text", hide=True, warn=True)
-    if result.stderr:
-        print(f"Error: {result.stderr}")
-    else:
-        user = result.stdout.strip()
-        print(f"User is {user}")
-
-    if user and hostname:
-        print(f"Connect to the new instance with: ssh {user}@{hostname}")
-
-    if snapshot_id:
-        # Retrieve the data folder.
-        # TODO: This can be misleading if the fabfile has changed since the creation of the snapshot.
-        parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-        parser.read(c.testy_config)
-        data_folder = parser.get("application", "database_dir")
-        print(f"The snapshot data is in the following folder: {data_folder}")
+# Spawn an AWS instance using a snapshot.
+@task
+def launch_snapshot(c, snapshot_id = None):
+    testy_launch_snapshot(snapshot_id)
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file

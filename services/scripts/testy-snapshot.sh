@@ -133,16 +133,16 @@ create_snapshot() {
     local _root_volume_id
     get_root_volume_id "$_instance_id" _root_volume_id
 
-    # Retrieve the architecture.
-    local _architecture
-    _architecture=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
-        --query 'Reservations[*].Instances[*].Architecture' --output text)
+    # Retrieve the platform of the instance.
+    local _platform
+    _platform=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
+        --query "Reservations[*].Instances[*].Tags[?Key==\`Platform\`].Value[]" --output text)
 
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
 	    "{Key=Name,Value=${_tag_name_prefix}-snapshot}," \
 	    "{Key=Application,Value=testy}," \
-	    "{Key=Architecture,Value=$_architecture}," \
+	    "{Key=Platform,Value=$_platform}," \
 	    "{Key=Validation,Value=pending}]"
 
     __snapshot_id=$(aws ec2 create-snapshot \
@@ -175,7 +175,7 @@ create_snapshot() {
         sleep $_wait_interval
         _snapshot_status=$(aws ec2 describe-snapshots \
             --snapshot-ids "$__snapshot_id" \
-		    --query "Snapshots[*].[State]" \
+		    --query "Snapshots[*].State" \
             --output text)
         ((_wait_time+=_wait_interval))
     done
