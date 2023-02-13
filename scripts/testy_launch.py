@@ -166,6 +166,7 @@ def wait_instance_running(instance_id):
     if state != expected_state and num_retry >= max_retries:
         raise Exit(f"Timeout: the instance {instance_id} is still in the state {state}")
 
+# Launch an AWS instance given a platform. If no platform is provided, print all the available ones.
 def testy_launch(platform = None):
 
     user = None
@@ -196,7 +197,7 @@ def testy_launch(platform = None):
         print(f"Error: {result.stderr}")
     instance_id = result.stdout.strip()
 
-    # Retrieve the use and the hostname.
+    # Retrieve the user and the hostname.
     hostname = get_hostname_from_instance(instance_id)
     user = get_default_user_from_platform(platform)
 
@@ -208,6 +209,8 @@ def testy_launch(platform = None):
 
     return user, hostname
 
+# Launch an AWS instance given a snapshot ID. If no snapshot ID is provided, print all the available
+# ones.
 def testy_launch_snapshot(snapshot_id = None):
 
     print(f"Snapshot: {snapshot_id}")
@@ -263,7 +266,7 @@ def testy_launch_snapshot(snapshot_id = None):
         # We don't need to exit if this call fails.
         print(f"Error: {result.stderr}")
 
-    # Retrieve the use and the hostname.
+    # Retrieve the user and the hostname.
     hostname = get_hostname_from_instance(instance_id)
     user = get_default_user_from_platform(platform)
 
