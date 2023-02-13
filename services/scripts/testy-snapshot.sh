@@ -136,13 +136,13 @@ create_snapshot() {
     # Retrieve the platform of the instance.
     local _platform
     _platform=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
-        --query "Reservations[*].Instances[*].Tags[?Key==\`Platform\`].Value[]" --output text)
+        --query "Reservations[*].Instances[*].Tags[?Key==\`LaunchTemplateName\`].Value[]" --output text)
 
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
 	    "{Key=Name,Value=${_tag_name_prefix}-snapshot}," \
 	    "{Key=Application,Value=testy}," \
-	    "{Key=Platform,Value=$_platform}," \
+	    "{Key=LaunchTemplateName,Value=$_platform}," \
 	    "{Key=Validation,Value=pending}]"
 
     __snapshot_id=$(aws ec2 create-snapshot \

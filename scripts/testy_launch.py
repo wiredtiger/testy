@@ -47,7 +47,7 @@ def get_platform_from_snapshot(snapshot_id):
     print(f"Retrieving platform from {snapshot_id}...")
     result = local(f"aws ec2 describe-snapshots \
         --snapshot-ids {snapshot_id} \
-        --query 'Snapshots[*].Tags[?Key==`Platform`].Value[]' \
+        --query 'Snapshots[*].Tags[?Key==`LaunchTemplateName`].Value[]' \
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(f"Error: {result.stderr}")
@@ -189,7 +189,7 @@ def testy_launch(platform = None):
     result = local(f"aws ec2 run-instances \
         --launch-template LaunchTemplateName={platform} \
         --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-            {{Key=Platform,Value={platform}}}]' \
+            {{Key=LaunchTemplateName,Value={platform}}}]' \
         --query Instances[*].InstanceId \
         --output text", hide=True, warn=True)
     if result.stderr:
@@ -248,7 +248,7 @@ def testy_launch_snapshot(snapshot_id = None):
     result = local(f"aws ec2 run-instances \
         --launch-template LaunchTemplateName={platform} \
         --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-            {{Key=Platform,Value={platform}}}]' \
+            {{Key=LaunchTemplateName,Value={platform}}}]' \
         --image-id {image_id} \
         --query Instances[*].InstanceId \
         --output text", hide=True, warn=True)
