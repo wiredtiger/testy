@@ -1,14 +1,16 @@
 [Unit]
-Description="testy-backup: An AWS snapshot-based database backup and validation service for the testy framework"
+Description="testy-backup: A backup and validation service"
 Documentation=https://github.com/wiredtiger/testy
 
 [Service]
 User=testy
 Group=testy
-# The crash service is of type oneshot, thus we cannot use the is-active command.
-ExecStartPre=/bin/bash -c 'test $(systemctl show --property MainPID --value testy-crash@%I.service) -eq 0'
+
+ExecStartPre=/bin/bash -c \
+  'test $(systemctl show --property MainPID testy-crash@%I.service | awk -F \'=\' \'{print $2}\') -eq 0'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup'
-ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status $EXIT_STATUS'
+#ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status $EXIT_STATUS'
+
 TimeoutSec=3600s
 StandardOutput=journal+console
 StandardError=journal+console
