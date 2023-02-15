@@ -152,12 +152,12 @@ def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
             return
 
     # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~~~~")
+    print("\n~~~~~~~~~~~~~~~~~")
     print(f"Launch succeeded!")
-    print("~~~~~~~~~~~~~~~~~~~~")
-    print(f"Distro: '{distro}'")
-    print(f"User: '{user}'")
-    print(f"Host: '{hostname}'")
+    print("~~~~~~~~~~~~~~~~~")
+    print(f"The distro is '{distro}'")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
 
 # Launch an AWS instance using a snapshot.
 @task
@@ -174,12 +174,12 @@ def launch_snapshot(c, snapshot_id):
     hostname = result['hostname']
 
     # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~~~~")
+    print("\n~~~~~~~~~~~~~~~~~")
     print(f"Launch succeeded!")
-    print("~~~~~~~~~~~~~~~~~~~~")
-    print(f"Snapshot: '{snapshot_id}'")
-    print(f"User: '{user}'")
-    print(f"Host: '{hostname}'")
+    print("~~~~~~~~~~~~~~~~~")
+    print(f"The snapshot is '{snapshot_id}'")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
