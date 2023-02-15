@@ -131,6 +131,32 @@ def wait_instance_running(instance_id):
     else:
         raise Exit(f"Timeout: the instance {instance_id} is not running.")
 
+def wait_instance_status_check_ok(instance_id):
+    print(f"Waiting for the EC2 instance '{instance_id}' to pass the status check ...")
+    max_retries = 20
+    num_retry = 0
+
+    while num_retry < max_retries:
+        result = local(f"aws ec2 describe-instance-status \
+            --instance-ids {instance_id} \
+            --query 'InstanceStatuses[*].[InstanceStatus.Status,SystemStatus.Status]' \
+            --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(result.stderr)
+        checks = result.stdout.strip().split()
+
+        while True:
+            if not len(checks):
+                return
+            print("Check is", checks[0])
+            if checks[0] != 'ok':
+                break
+            checks.pop(0)
+        num_retry += 1
+        time.sleep(10)
+    else:
+        raise Exit(f"Timeout: the instance {instance_id} has not passed the status check yet.")
+
 # Launch an AWS instance given a distro.
 # This function returns a dictionary with a 'status' field that is set to 0 only when the instance
 # has been launched successfully. In that case, the dictionary contains a 'user' and 'host' fields.
@@ -159,6 +185,7 @@ def testy_launch(distro):
         user = get_value_from_launch_template(distro, 'User')
 
         wait_instance_running(instance_id)
+        wait_instance_status_check_ok(instance_id)
     except Exception as e:
         return {"status": 1, "msg": str(e).strip()}
 
