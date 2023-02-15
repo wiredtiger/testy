@@ -143,7 +143,7 @@ def testy_launch(distro):
 
     try:
         if not launch_template_exists(distro):
-            raise Exit(f"The distro {distro} does not exist.")
+            raise Exit(f"The distro '{distro}' does not exist.")
         
         # Launch an EC2 instance based on a template.
         result = local(f"aws ec2 run-instances \
@@ -163,7 +163,7 @@ def testy_launch(distro):
     except Exception as e:
         return {"status": 1, "msg": str(e).strip()}
 
-    return {"status": 0, "user":user, "hostname":hostname}
+    return {"status": 0, "user": user, "hostname": hostname}
 
 # Launch an AWS instance given a snapshot ID.
 # This function returns a dictionary with a 'status' field that is set to 0 only when the instance
