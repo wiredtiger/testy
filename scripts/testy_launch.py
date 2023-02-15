@@ -116,9 +116,9 @@ def wait_instance_running(instance_id):
     num_retry = 0
 
     while num_retry < max_retries:
-        result = local(f"aws ec2 describe-instances \
+        result = local(f"aws ec2 describe-instance-status \
             --instance-ids {instance_id} \
-            --query 'Reservations[*].Instances[*].State.Code' \
+            --query 'InstanceStatuses[*].InstanceState.Code' \
             --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(result.stderr)
