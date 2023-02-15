@@ -23,6 +23,7 @@ def get_image_id(image_name):
     image_id = result.stdout.strip()
     return image_id
 
+# Get all the available launch templates and return the result as a list.
 def get_launch_templates():
     result = local("aws ec2 describe-launch-templates \
         --query 'LaunchTemplates[*].LaunchTemplateName' \
@@ -30,8 +31,9 @@ def get_launch_templates():
     if result.stderr:
         raise Exit(result.stderr)
     launch_templates = result.stdout.strip()
-    return launch_templates
+    return launch_templates.split()
 
+# Get all the available snapshots and return the result as a list.
 def get_snapshots():
     result = local("aws ec2 describe-snapshots \
         --filter 'Name=tag:Application,Values=testy' \
@@ -40,7 +42,7 @@ def get_snapshots():
     if result.stderr:
         raise Exit(result.stderr)
     snapshots = result.stdout.strip()
-    return snapshots
+    return snapshots.split()
 
 def get_snapshot_status(snapshot_id):
     result = local(f"aws ec2 describe-snapshots \

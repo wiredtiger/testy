@@ -9,7 +9,8 @@ from invoke.exceptions import Exit
 from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
-from scripts.testy_launch import testy_launch, testy_launch_snapshot
+from scripts.testy_launch import get_launch_templates, get_snapshots, testy_launch, \
+    testy_launch_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
@@ -435,6 +436,59 @@ def workload(c, upload=None, list=False, describe=None):
             print("The current workload is unspecified.")
     
     return current_workload or None
+
+# The list function takes 3 optional arguments distros, snapshots and workloads.
+# If distros is True, the function lists all the available distros that can be used in the fab
+# launch function.
+# If snapshots is True, the function lists all the available snapshots that can be used in the fab
+# launch_snapshot function.
+# If workloads is True, the function lists the available workloads in the workloads directory and
+# highlights the current workload. Note that this can only be executed on the remote host using the
+# -H option, i.e fab -H <user>@<hostname> list --workloads.
+@task
+def list(c, distros=False, snapshots=False, workloads=False):
+    if distros:
+        launch_templates = None
+        try:
+            launch_templates = get_launch_templates()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        else:
+            print("Available distros:")
+            if launch_templates:
+                for template in launch_templates:
+                    print(f'- {template}')
+            else:
+                print('No launch templates found.')
+
+    if snapshots:
+        snapshots = None
+        try:
+            snapshots = get_snapshots()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        else:
+            print("Available snapshots:")
+            if snapshots:
+                for snapshot in snapshots:
+                    print(f'- {snapshot}')
+            else:
+                print('No snapshots found.')
+
+    if workloads:
+        current_workload = get_value(c, "application", "current_workload")
+        user = get_value(c, "application", "user")
+        command = "ls " + get_value(c, "application", "workload_dir")
+
+        result = c.sudo(command, user=user, warn=True, hide=True)
+        if result.ok:
+            print("\n\033[1mAvailable workloads: \033[0m")
+            if current_workload:
+                result.stdout = re.sub(r"(?<!-)\b%s(?!-)\b" % current_workload, \
+                    f"\033[1;35m{current_workload} (active)\033[0m", result.stdout)
+            print(result.stdout)
+        else:
+            print(result.stderr)
 
 # Print information about the testy framework including testy and WiredTiger branch and commit hash,
 # current workload, testy service status and the WiredTiger version. 
