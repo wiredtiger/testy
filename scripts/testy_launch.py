@@ -84,6 +84,7 @@ def launch_template_exists(launch_template_name):
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
+    return True if result.stdout.strip() else False
 
 def register_image_from_snapshot(image_name, architecture, snapshot_id):
     result = local("aws ec2 register-image \
@@ -105,6 +106,7 @@ def snapshot_exists(snapshot_id):
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
+    return True if result.stdout.strip() else False
 
 def wait_instance_running(instance_id):
     print(f"Waiting for the EC2 instance '{instance_id}' to be running ...")
@@ -140,7 +142,8 @@ def testy_launch(distro):
     hostname = None
 
     try:
-        launch_template_exists(distro)
+        if not launch_template_exists(distro):
+            raise Exit(f"The distro {distro} does not exist.")
         
         # Launch an EC2 instance based on a template.
         result = local(f"aws ec2 run-instances \
@@ -169,7 +172,8 @@ def testy_launch(distro):
 def testy_launch_snapshot(snapshot_id):
 
     try:
-        snapshot_exists(snapshot_id)
+        if not snapshot_exists(snapshot_id):
+            raise Exit(f"The snapshot {snapshot_id} does not exist.")
 
         snapshot_status = get_snapshot_status(snapshot_id)
         if snapshot_status != 'completed':
