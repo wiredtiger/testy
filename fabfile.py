@@ -120,13 +120,13 @@ def populate(c, workload):
 
 # Launch an AWS instance and install testy using the given WiredTiger and testy branches.
 @task
-def launch(c, platform, wiredtiger_branch="develop", testy_branch="main"):
+def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
 
-    print(f"Launching an EC2 instance using the platform '{platform}' ...")
+    print(f"Launching a testy server in EC2 for '{distro}' ...")
 
-    result = testy_launch(platform)
+    result = testy_launch(distro)
     if result['status'] != 0:
-        print(f"Failed to launch a EC2 instance for the platform '{platform}'. {result['msg']}")
+        print(f"Launch failed. {result['msg']}")
         return
 
     user = result['user']
@@ -148,16 +148,16 @@ def launch(c, platform, wiredtiger_branch="develop", testy_branch="main"):
                 continue
             break
         else:
-            print(exception)
+            print(f"Launch failed. {exception}")
             return
 
     # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(f"Launching a new EC2 instance from '{platform}' is complete!")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(f"The platform is '{platform}'")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
+    print("\n~~~~~~~~~~~~~~~~~~~~")
+    print(f"Launch succeeded!")
+    print("~~~~~~~~~~~~~~~~~~~~")
+    print(f"Distro: '{distro}'")
+    print(f"User: '{user}'")
+    print(f"Host: '{hostname}'")
 
 # Launch an AWS instance using a snapshot.
 @task
@@ -167,19 +167,19 @@ def launch_snapshot(c, snapshot_id):
 
     result = testy_launch_snapshot(snapshot_id)
     if result['status'] != 0:
-        print(f"Failed to launch a EC2 instance using the snapshot '{snapshot_id}'. {result['msg']}")
+        print(f"Launch failed. {result['msg']}")
         return
 
     user = result['user']
     hostname = result['hostname']
 
     # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(f"Launching a new EC2 instance from '{snapshot_id}' is complete!")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print(f"The snapshot is '{snapshot_id}'")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
+    print("\n~~~~~~~~~~~~~~~~~~~~")
+    print(f"Launch succeeded!")
+    print("~~~~~~~~~~~~~~~~~~~~")
+    print(f"Snapshot: '{snapshot_id}'")
+    print(f"User: '{user}'")
+    print(f"Host: '{hostname}'")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
