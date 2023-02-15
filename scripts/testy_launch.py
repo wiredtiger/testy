@@ -110,7 +110,6 @@ def snapshot_exists(snapshot_id):
 
 def wait_instance_running(instance_id):
     print(f"Waiting for the EC2 instance '{instance_id}' to be running ...")
-    state = None
     # Code 16 corresponds to "running".
     expected_state = "16"
     max_retries = 20
