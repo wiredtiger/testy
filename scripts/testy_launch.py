@@ -3,7 +3,7 @@ from invoke import run as local
 from invoke.exceptions import Exit
 import sys
 
-def get_hostname_from_instance(instance_id):
+def get_hostname_for_instance(instance_id):
     result = local(f"aws ec2 describe-instances \
         --instance-ids {instance_id} \
         --query 'Reservations[*].Instances[*].PublicDnsName' \
@@ -13,19 +13,7 @@ def get_hostname_from_instance(instance_id):
     hostname = result.stdout.strip()
     return hostname
 
-def get_platform_from_snapshot(snapshot_id):
-    result = local(f"aws ec2 describe-snapshots \
-        --snapshot-ids {snapshot_id} \
-        --query 'Snapshots[*].Tags[?Key==`LaunchTemplateName`].Value[]' \
-        --output text", hide=True, warn=True)
-    if result.stderr:
-        raise Exit(result.stderr)
-    platform = result.stdout.strip()
-    if not platform:
-        raise Exit(f"Error: The platform could not be retrieved from the snapshot {snapshot_id}")
-    return platform
-
-def image_exists(image_name):
+def get_image_id(image_name):
     result = local(f"aws ec2 describe-images \
         --filters \"Name=name,Values={image_name}\" \
         --query 'Images[*].ImageId' \
@@ -35,19 +23,16 @@ def image_exists(image_name):
     image_id = result.stdout.strip()
     return image_id
 
-def get_platforms():
-    print("Retrieving platforms...")
+def get_launch_templates():
     result = local("aws ec2 describe-launch-templates \
         --query 'LaunchTemplates[*].LaunchTemplateName' \
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
-    platforms = result.stdout.strip()
-    print(f"Platforms: {platforms}")
-    return platforms
+    launch_templates = result.stdout.strip()
+    return launch_templates
 
 def get_snapshots():
-    print("Retrieving snapshots...")
     result = local("aws ec2 describe-snapshots \
         --filter 'Name=tag:Application,Values=testy' \
         --query 'Snapshots[*].SnapshotId' \
@@ -55,7 +40,6 @@ def get_snapshots():
     if result.stderr:
         raise Exit(result.stderr)
     snapshots = result.stdout.strip()
-    print(f"Snapshots: {snapshots}")
     return snapshots
 
 def get_snapshot_status(snapshot_id):
@@ -80,9 +64,21 @@ def get_value_from_launch_template(launch_template_name, key):
         raise Exit(f"Error: Unable to retrieve '{key}' for '{launch_template_name}'")
     return value
 
-def platform_exists(platform):
+def get_value_from_snapshot(snapshot_id, key):
+    result = local(f"aws ec2 describe-snapshots \
+        --snapshot-ids {snapshot_id} \
+        --query 'Snapshots[*].Tags[?Key==`{key}`].Value[]' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    value = result.stdout.strip()
+    if not value:
+        raise Exit(f"Error: Unable to retrieve '{key}' for '{snapshot_id}'")
+    return value
+
+def launch_template_exists(launch_template_name):
     result = local(f"aws ec2 describe-launch-templates \
-        --launch-template-names {platform} \
+        --launch-template-names {launch_template_name} \
         --filter 'Name=tag:Application,Values=testy' \
         --query 'LaunchTemplates[*].LaunchTemplateName' \
         --output text", hide=True, warn=True)
@@ -134,31 +130,31 @@ def wait_instance_running(instance_id):
     else:
         raise Exit(f"Timeout: the instance {instance_id} is not running.")
 
-# Launch an AWS instance given a platform.
+# Launch an AWS instance given a distro.
 # This function returns a dictionary with a 'status' field that is set to 0 only when the instance
 # has been launched successfully. In that case, the dictionary contains a 'user' and 'host' fields.
 # Upon failure, the 'status' field is not 0 and the 'msg' field contains the error message.
-def testy_launch(platform):
+def testy_launch(distro):
 
     user = None
     hostname = None
 
     try:
-        platform_exists(platform)
+        launch_template_exists(distro)
         
         # Launch an EC2 instance based on a template.
         result = local(f"aws ec2 run-instances \
-            --launch-template LaunchTemplateName={platform} \
+            --launch-template LaunchTemplateName={distro} \
             --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-                {{Key=LaunchTemplateName,Value={platform}}}]' \
+                {{Key=LaunchTemplateName,Value={distro}}}]' \
             --query Instances[*].InstanceId \
             --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(result.stderr)
         instance_id = result.stdout.strip()
 
-        hostname = get_hostname_from_instance(instance_id)
-        user = get_value_from_launch_template(platform, 'User')
+        hostname = get_hostname_for_instance(instance_id)
+        user = get_value_from_launch_template(distro, 'User')
 
         wait_instance_running(instance_id)
     except Exception as e:
@@ -179,19 +175,19 @@ def testy_launch_snapshot(snapshot_id):
         if snapshot_status != 'completed':
             raise Exit(f"The snapshot '{snapshot_id}' is incomplete ({snapshot_status}).")
 
-        platform = get_platform_from_snapshot(snapshot_id)
-        image_name = f"{platform}-{snapshot_id}"
-        image_id = image_exists(image_name)
+        launch_template_name = get_value_from_snapshot(snapshot_id, 'LaunchTemplateName')
+        image_name = f"{launch_template_name}-{snapshot_id}"
+        image_id = get_image_id(image_name)
 
         if not image_id:
-            architecture = get_value_from_launch_template(platform, 'Architecture')
+            architecture = get_value_from_launch_template(launch_template_name, 'Architecture')
             image_id = register_image_from_snapshot(image_name, architecture, snapshot_id)
 
         # Launch an EC2 instance based on a template and an image ID.
         result = local(f"aws ec2 run-instances \
-            --launch-template LaunchTemplateName={platform} \
+            --launch-template LaunchTemplateName={launch_template_name} \
             --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-                {{Key=LaunchTemplateName,Value={platform}}}]' \
+                {{Key=LaunchTemplateName,Value={launch_template_name}}}]' \
             --image-id {image_id} \
             --query Instances[*].InstanceId \
             --output text", hide=True, warn=True)
@@ -206,8 +202,8 @@ def testy_launch_snapshot(snapshot_id):
             print(f"Error: {result.stderr}")
 
         # Retrieve the user and the hostname.
-        hostname = get_hostname_from_instance(instance_id)
-        user = get_value_from_launch_template(platform, 'User')
+        hostname = get_hostname_for_instance(instance_id)
+        user = get_value_from_launch_template(launch_template_name, 'User')
 
         # Wait for the instance to be running.
         wait_instance_running(instance_id)
