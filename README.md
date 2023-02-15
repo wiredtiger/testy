@@ -47,10 +47,10 @@ If a workload is already running, the start function will not work. Either call 
   ```
 
 ## Using `fab workload`
-The workload function has three options: upload, list and describe. If no option is given it will return the current workload. Up to three options can be given at a time in any order but they will be executed in the order of (1) `upload`, (2) `list`, and (3) `describe`. If one option fails, an error message will be printed and the other options will continue to execute. 
+The workload function has two options: upload and describe. If no option is given it will return the current workload. Up to two options can be given at a time in any order but they will be executed in the order of (1) `upload` and (2) `describe`. If one option fails, an error message will be printed and the other options will continue to execute.
 
   ```
-  fab -H user@host workload [--upload=new_workload_name.zip] [--list] [--describe=existing_workload_name]
+  fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_workload_name]
   
   # This will return the current workload.
   fab -H user@host workload
@@ -74,6 +74,23 @@ The workload function has three options: upload, list and describe. If no option
   fab -H user@host workload --describe
   ```
 
+## Using `fab list`
+The list function has three options: distros, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message will be printed and the other options will continue to execute.
+
+- The `list --distros` command lists all available distros where a testy server can be installed through the `fab launch` command.
+  ```
+  fab list --distros
+  ```
+
+- The `list --snapshots` command lists all available snapshots that can be used through the `fab launch-snapshot` command.
+  ```
+  fab list --snapshots
+  ```
+
+- The `fab list --workloads` command lists all available workloads on the testy server, highlighting the current workload selected. 
+  ```
+  fab -H user@hostname list --workloads
+  ```
 
 ## Installing and updating testy
 
