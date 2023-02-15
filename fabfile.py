@@ -355,16 +355,15 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
 
-# The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
+# The workload function takes 2 optional arguments upload and describe. If no arguments are 
 # provided, the current workload is returned.
 @task
-def workload(c, upload=None, list=False, describe=None):
+def workload(c, upload=None, describe=None):
     """ Upload, list, and describe workloads. 
-    Up to three optional arguments can be taken at a time. If more than one option is specified at
+    Up to 2 optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
-       2. list
-       3. describe
+       2. describe
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
     """
@@ -403,19 +402,6 @@ def workload(c, upload=None, list=False, describe=None):
                 else:
                     print(f"Failed to add '{workload_name}'.")
                 c.sudo(f"rm -f {src} /tmp/{upload}")
-
-    # Lists the available workloads in the workloads directory and highlights the current workload.
-    if list:
-        command = "ls " + get_value(c, "application", "workload_dir")
-        result = c.sudo(command, user=user, warn=True, hide=True)
-        if result.ok:
-            print("\n\033[1mAvailable workloads: \033[0m")
-            if current_workload:
-                result.stdout = re.sub(r"(?<!-)\b%s(?!-)\b" % current_workload, \
-                    f"\033[1;35m{current_workload} (active)\033[0m", result.stdout)
-            print(result.stdout)
-        else:
-            print(result.stderr)
 
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
