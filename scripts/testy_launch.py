@@ -3,30 +3,6 @@ from invoke import run as local
 from invoke.exceptions import Exit
 import sys
 
-def get_architecture_from_platform(platform):
-    result = local(f"aws ec2 describe-launch-templates \
-        --launch-template-name {platform} \
-        --query 'LaunchTemplates[*].Tags[?Key==`Architecture`].Value[]' \
-        --output text", hide=True, warn=True)
-    if result.stderr:
-        raise Exit(result.stderr)
-    architecture = result.stdout.strip()
-    if not architecture:
-        raise Exit(f"Error: The architecture could not be retrieved from the platform {platform}")
-    return architecture
-
-def get_default_user_from_platform(platform):
-    result = local(f"aws ec2 describe-launch-templates \
-        --launch-template-name {platform} \
-        --query 'LaunchTemplates[*].Tags[?Key==`User`].Value[]' \
-        --output text", hide=True, warn=True)
-    if result.stderr:
-        raise Exit(result.stderr)
-    user = result.stdout.strip()
-    if not user:
-        raise Exit(f"Error: The user could not be retrieved from the platform {platform}")
-    return user
-
 def get_hostname_from_instance(instance_id):
     result = local(f"aws ec2 describe-instances \
         --instance-ids {instance_id} \
@@ -91,6 +67,18 @@ def get_snapshot_status(snapshot_id):
         raise Exit(result.stderr)
     snapshot_status = result.stdout.strip()
     return snapshot_status
+
+def get_value_from_launch_template(launch_template_name, key):
+    result = local(f"aws ec2 describe-launch-templates \
+        --launch-template-name {launch_template_name} \
+        --query 'LaunchTemplates[*].Tags[?Key==`{key}`].Value[]' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    value = result.stdout.strip()
+    if not value:
+        raise Exit(f"Error: Unable to retrieve '{key}' for '{launch_template_name}'")
+    return value
 
 def platform_exists(platform):
     result = local(f"aws ec2 describe-launch-templates \
@@ -170,7 +158,7 @@ def testy_launch(platform):
         instance_id = result.stdout.strip()
 
         hostname = get_hostname_from_instance(instance_id)
-        user = get_default_user_from_platform(platform)
+        user = get_value_from_launch_template(platform, 'User')
 
         wait_instance_running(instance_id)
     except Exception as e:
@@ -196,7 +184,7 @@ def testy_launch_snapshot(snapshot_id):
         image_id = image_exists(image_name)
 
         if not image_id:
-            architecture = get_architecture_from_platform(platform)
+            architecture = get_value_from_launch_template(platform, 'Architecture')
             image_id = register_image_from_snapshot(image_name, architecture, snapshot_id)
 
         # Launch an EC2 instance based on a template and an image ID.
@@ -219,7 +207,7 @@ def testy_launch_snapshot(snapshot_id):
 
         # Retrieve the user and the hostname.
         hostname = get_hostname_from_instance(instance_id)
-        user = get_default_user_from_platform(platform)
+        user = get_value_from_launch_template(platform, 'User')
 
         # Wait for the instance to be running.
         wait_instance_running(instance_id)
