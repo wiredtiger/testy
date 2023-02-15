@@ -5,18 +5,16 @@ A WiredTiger test framework to run 24/7 workloads
 ## Setup
 Running testy requires two machines: a local machine from which to run the `fab` commands and a remote machine where the testy framework lives. Your local machine should be your Mac laptop and not an evergreen workstation. We have not yet tested running Fabric on Windows.
 
-- Spawn an Ubuntu 18.04/20.04 [evergreen host](https://spruce.mongodb.com/spawn/host) to use for your remote machine. 
-
 - On your local machine, install the python packages needed to run Fabric commands:
   ```
   python3 -m pip install fabric invocations
   ```
 
-- Run the install command from your local machine:
+- Launch an EC2 instance and install testy using the `fab launch` command:
   ```
-  fab -H user@host install
+  fab launch --distro=<distro> [--wiredtiger-brbanch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
   ```
-  where user@host is the user and host name used to log into the remote evergreen host (it looks something like `ubuntu@ec2-7-21-20-75.ap-southeast-2.compute.amazonaws.com`).
+  By default, the WiredTiger branch is `develop` and the testy branch is `main`.
 
 ## Running testy
 
@@ -77,13 +75,18 @@ The workload function has three options: upload, list and describe. If no option
   ```
 
 
-## Updating testy
+## Installing and updating testy
 
-- The `update` function allows you update the wiredtiger and/or testy source on the remote. This function can take two optional arguments, a wiredtiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made. 
+The `install` function allows you to install testy on an existing and supported instance:
   ```
-  fab -H user@host update [--wiredtiger-branch=branch] [--testy-branch=branch]
-  ```
+fab -H user@host install [--wiredtiger-branch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
+```
+By default, the WiredTiger branch is `develop` and the testy branch is `main`.
 
+The `update` function allows you update the wiredtiger and/or testy source on the remote host. This function can take two optional arguments, a WiredTiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made.
+```
+fab -H user@host update [--wiredtiger-branch=branch] [--testy-branch=branch]
+```
 
 ## Adding functions to fabfile.py
 
@@ -91,31 +94,32 @@ We use [Fabric](https://www.fabfile.org/) -- a high-level Python library designe
 
 To add new functionality in `fabfile.py` follow the structure: 
 
-  ```
-  @task
-  def describe(c, workload_name)
-      # Full path to the workload interface file. 
-      wif = f"testy/workloads/{workload_name}/{workload_name}.sh"
+```
+@task
+def describe(c, workload_name)
+    # Full path to the workload interface file.
+    wif = f"testy/workloads/{workload_name}/{workload_name}.sh"
 
-      # Call on the describe() function in the workload interface file.
-      command = wif + " describe"
-      result = c.run(command, user=user, warn=True)
+    # Call on the describe() function in the workload interface file.
+    command = wif + " describe"
+    result = c.run(command, user=user, warn=True)
 
-      # This will print the result to your local terminal.
-      if not result: 
-          print(f"Unable to describe '{workload_name}' workload.")
-      elif result.stdout == "":
-          print(f"No description provided for workload '{workload_name}'.")
+    # This will print the result to your local terminal.
+    if not result:
+        print(f"Unable to describe '{workload_name}' workload.")
+    elif result.stdout == "":
+        print(f"No description provided for workload '{workload_name}'.")
 
-  ```
-  In the terminal we can call this new function `describe` like so:  
-  ```
-  # Note that underscores in function arguments are converted to dashes on the command line.  
-  fab -H user@host describe <--workload-name=sample_workload>
-  ```
+```
+In the terminal we can call this new function `describe` like so:
+```
+# Note that underscores in function arguments are converted to dashes on the command line.
+fab -H user@host describe <--workload-name=sample_workload>
+```
 
 Fabric tasks require a context object as the first argument followed by zero or more user-defined arguments. The context object (passed in as `c` in the example above) is used to share parser and configuration state with executed tasks and provides functions to execute commands on the remote server, such as `c.run()`.
-- You can also add additional arguments that give the user ability to pass arguments into these fabric functions as well. 
+
+You can also add additional arguments that give the user ability to pass arguments into these fabric functions as well.
 
 Fabric allows you to execute shell commands both on the remote server and locally. 
 
