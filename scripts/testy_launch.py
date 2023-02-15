@@ -125,7 +125,7 @@ def wait_instance_running(instance_id):
         state = result.stdout.strip()
         if state != expected_state:
             num_retry += 1
-            time.sleep(5)
+            time.sleep(10)
         else:
             break
     else:
