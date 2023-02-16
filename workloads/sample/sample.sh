@@ -11,7 +11,7 @@ populate() {
 }
 
 run() {
-    export PYTHONPATH=${wt_build_dir}/bench/workgen:${wt_build_dir}/lang/python:$PYTHONPATH
+    export PYTHONPATH=${wt_build_dir}/bench/workgen:${wt_build_dir}/../bench/workgen/runner:${wt_build_dir}/lang/python:$PYTHONPATH
     python3 ${workload_dir}/sample/sample_run.py --home ${database_dir} --keep
 }
 
