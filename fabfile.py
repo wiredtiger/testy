@@ -439,7 +439,7 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable distros: \033[0m")
             if launch_templates:
                 for template in launch_templates:
-                    print(f'- {template}')
+                    print(f'{template}')
             else:
                 print('No launch templates found.')
 
@@ -476,6 +476,9 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print(result.stdout)
         else:
             print(result.stderr)
+
+    if not workloads:
+        print()
 
 # Print information about the testy framework including testy and WiredTiger branch and commit hash,
 # current workload, testy service status and the WiredTiger version. 
