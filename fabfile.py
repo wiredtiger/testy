@@ -2,15 +2,18 @@
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
 import os, re, configparser as cp
-from fabric import task
-from pathlib import Path
+from contextlib import redirect_stdout
+import time
+from paramiko.ssh_exception import NoValidConnectionsError
 from invoke.exceptions import Exit
 from invocations.console import confirm
-from contextlib import redirect_stdout
+from fabric import Connection, task
+from pathlib import Path
+from scripts.testy_launch import testy_launch, testy_launch_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
-
+testy_config = ".testy"
 
 # ---------------------------------------------------------------------------------------
 # Tasks
@@ -28,7 +31,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
     # Read configuration file.
     config = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    config.read(c.testy_config)
+    config.read(testy_config)
 
     # Create application user.
     user = config.get("application", "user")
@@ -56,7 +59,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
        git_clone(c, config.get(repo[0], "git_url"), config.get(repo[0], "home_dir"), repo[1])
 
     # Create working files and directories that can be modified by the framework user.
-    create_working_copy(c, config.get("testy", "home_dir") + f"/{c.testy_config}",
+    create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
     create_working_copy(c, config.get("testy", "service_script_dir"), testy_dir, user)
@@ -114,6 +117,67 @@ def populate(c, workload):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
+
+# Launch an AWS instance and install testy using the given WiredTiger and testy branches.
+@task
+def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
+
+    print(f"Launching a testy server in EC2 for '{distro}' ...")
+
+    result = testy_launch(distro)
+    if result['status'] != 0:
+        print(f"Launch failed. {result['msg']}")
+        return
+
+    user = result['user']
+    hostname = result['hostname']
+    host = f"{user}@{hostname}"
+
+    max_retries = 10
+    num_retry = 0
+    exception = None
+    with Connection(host) as conn:
+        while num_retry < max_retries:
+            try:
+                # Give the host some time.
+                time.sleep(10)
+                install(conn, wiredtiger_branch, testy_branch)
+            except NoValidConnectionsError as e:
+                num_retry += 1
+                exception = e
+                continue
+            break
+        else:
+            print(f"Launch failed. {exception}")
+            return
+
+    # Print summary on success.
+    print("\n~~~~~~~~~~~~~~~~~")
+    print(f"Launch succeeded!")
+    print("~~~~~~~~~~~~~~~~~")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
+
+# Launch an AWS instance using a snapshot.
+@task
+def launch_snapshot(c, snapshot_id):
+
+    print(f"Launching an EC2 instance using the snapshot '{snapshot_id}' ...")
+
+    result = testy_launch_snapshot(snapshot_id)
+    if result['status'] != 0:
+        print(f"Launch failed. {result['msg']}")
+        return
+
+    user = result['user']
+    hostname = result['hostname']
+
+    # Print summary on success.
+    print("\n~~~~~~~~~~~~~~~~~")
+    print(f"Launch succeeded!")
+    print("~~~~~~~~~~~~~~~~~")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
@@ -441,9 +505,9 @@ def set_value(c, section, key, value):
 def parser_operation(c, func, section, key=None, value=None):
 
     parser = cp.ConfigParser(interpolation=cp.ExtendedInterpolation())
-    parser.read(c.testy_config)
+    parser.read(testy_config)
 
-    config = parser.get("application", "testy_dir") + f"/{c.testy_config}"
+    config = parser.get("application", "testy_dir") + f"/{testy_config}"
     script = parser.get("testy", "parse_script")
     user = parser.get("application", "user")
 
@@ -768,7 +832,7 @@ def update_testy(c, branch):
 
     # Copy testy config and workload directory.
     user = get_value(c, "application", "user")
-    create_working_copy(c, f"{testy_git_dir}/{c.testy_config}",
+    create_working_copy(c, f"{testy_git_dir}/{testy_config}",
                         get_value(c, "application", "testy_dir"), user)
     create_working_copy(c, get_value(c, "testy", "workload_dir") + "/*",
                         get_value(c, "application", "workload_dir"), user)
