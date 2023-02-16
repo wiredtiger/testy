@@ -2,20 +2,27 @@
 A WiredTiger test framework to run 24/7 workloads
 <img src="https://user-images.githubusercontent.com/15895661/200436292-66c87f0d-3068-4bae-a002-3de473faf8b5.png" align="right">
 
-## Setup
+## Installing testy
 Running testy requires two machines: a local machine from which to run the `fab` commands and a remote machine where the testy framework lives. Your local machine should be your Mac laptop and not an evergreen workstation. We have not yet tested running Fabric on Windows.
 
-- On your local machine, install the python packages needed to run Fabric commands:
+On your local machine, install the python packages needed to run Fabric commands:
   ```
   python3 -m pip install fabric invocations
   ```
-
-- Launch an EC2 instance and install testy using the `fab launch` command:
+### Install testy on a new AWS EC2 instance
+Launch an EC2 instance and install testy using the `fab launch` command:
   ```
   fab launch --distro=<distro> [--wiredtiger-brbanch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
   ```
-  By default, the WiredTiger branch is `develop` and the testy branch is `main`.
+ 
+### Install testy on an existing machine
+The `install` function allows you to install testy on an existing machine (such as an Evergreen host or workstation) running one of our supported distributions:
+  ```
+fab -H user@host install [--wiredtiger-branch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
+```
 
+If not specified, the WiredTiger branch defaults to `develop` and the testy branch to `main`.
+  
 ## Running testy
 
 You can upload a [workload](#using-fab-workload) or use an existing workload in the testy framework. If the workload requires the database to be populated before starting, do this first. If either process fails, an error message is returned.
@@ -87,13 +94,7 @@ The list function has three options: distros, snapshot and workloads. Up to thre
   fab -H user@hostname list --workloads
   ```
 
-## Installing and updating testy
-
-The `install` function allows you to install testy on an existing and supported instance:
-  ```
-fab -H user@host install [--wiredtiger-branch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
-```
-By default, the WiredTiger branch is `develop` and the testy branch is `main`.
+## `fab update`
 
 The `update` function allows you update the wiredtiger and/or testy source on the remote host. This function can take two optional arguments, a WiredTiger branch and/or a testy branch and updates the current branch to these supplied branches. The `update` function stops the current workload, updates the branches and starts the workload again in its function. If no arguments are provided, nothing is done.
 ```
