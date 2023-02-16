@@ -359,7 +359,7 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
 # provided, the current workload is returned.
 @task
 def workload(c, upload=None, describe=None):
-    """ Upload, list, and describe workloads. 
+    """ Upload and describe workloads.
     Up to 2 optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called): - 
        1. upload
@@ -415,7 +415,7 @@ def workload(c, upload=None, describe=None):
             print(f"No description provided for workload '{describe}'.")
     
     # If no option has been specified, print the current workload and return as usual.  
-    if not describe and not upload and not list:
+    if not describe and not upload:
         if current_workload:
             print(f"The current workload is {current_workload}.")
         else: 
