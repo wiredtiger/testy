@@ -438,7 +438,7 @@ def list(c, distros=False, snapshots=False, workloads=False):
         except Exception as e:
             print(f"Error: {str(e)}")
         else:
-            print("Available distros:")
+            print("\n\033[1mAvailable distros: \033[0m")
             if launch_templates:
                 for template in launch_templates:
                     print(f'- {template}')
@@ -452,7 +452,7 @@ def list(c, distros=False, snapshots=False, workloads=False):
         except Exception as e:
             print(f"Error: {str(e)}")
         else:
-            print("Available snapshots:")
+            print("\n\033[1mAvailable snapshots: \033[0m")
             if snapshots:
                 for snapshot in snapshots:
                     print(f'- {snapshot}')
