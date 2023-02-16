@@ -453,11 +453,16 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable snapshots: \033[0m")
             if snapshots:
                 for snapshot in snapshots:
-                    print(f'- {snapshot}')
+                    print(f'{snapshot}')
             else:
                 print('No snapshots found.')
 
     if workloads:
+        # The -H option is mandatory to list the workloads.
+        if type(c) is not Connection:
+            print("Please specify the testy server with the -H option to list the workloads.")
+            return
+
         current_workload = get_value(c, "application", "current_workload")
         user = get_value(c, "application", "user")
         command = "ls " + get_value(c, "application", "workload_dir")
