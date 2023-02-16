@@ -98,6 +98,13 @@ def register_image_from_snapshot(image_name, architecture, snapshot_id):
     image_id = result.stdout.strip()
     return image_id
 
+def set_instance_name(instance_id, name):
+    result = local(f"aws ec2 create-tags \
+        --resources {instance_id} \
+        --tags Key=Name,Value={name}", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+
 def snapshot_exists(snapshot_id):
     result = local(f"aws ec2 describe-snapshots \
         --snapshot-ids {snapshot_id} \
@@ -180,6 +187,8 @@ def testy_launch(distro):
             raise Exit(result.stderr)
         instance_id = result.stdout.strip()
 
+        set_instance_name(instance_id, f"testy-{distro}-{instance_id}")
+
         hostname = get_hostname_for_instance(instance_id)
         user = get_value_from_launch_template(distro, 'User')
 
@@ -230,11 +239,11 @@ def testy_launch_snapshot(snapshot_id):
             # We don't need to exit if this call fails.
             print(f"Error: {result.stderr}")
 
-        # Retrieve the user and the hostname.
+        set_instance_name(instance_id, f"testy-{launch_template_name}-{snapshot_id}")
+
         hostname = get_hostname_for_instance(instance_id)
         user = get_value_from_launch_template(launch_template_name, 'User')
 
-        # Wait for the instance to be running.
         wait_instance_running(instance_id)
     except Exception as e:
         return {"status": 1, "msg": str(e).strip()}
