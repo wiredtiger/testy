@@ -13,8 +13,8 @@ from scripts.testy_launch import get_launch_templates, get_snapshots, testy_laun
     testy_launch_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
-wiredtiger = "\033[1;33mwiredtiger\033[0m"
 testy_config = ".testy"
+wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 # ---------------------------------------------------------------------------------------
 # Tasks
