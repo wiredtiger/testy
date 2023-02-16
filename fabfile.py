@@ -156,7 +156,6 @@ def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
     print("\n~~~~~~~~~~~~~~~~~")
     print(f"Launch succeeded!")
     print("~~~~~~~~~~~~~~~~~")
-    print(f"The distro is '{distro}'")
     print(f"The user is '{user}'")
     print(f"The host is '{hostname}'")
 
@@ -178,7 +177,6 @@ def launch_snapshot(c, snapshot_id):
     print("\n~~~~~~~~~~~~~~~~~")
     print(f"Launch succeeded!")
     print("~~~~~~~~~~~~~~~~~")
-    print(f"The snapshot is '{snapshot_id}'")
     print(f"The user is '{user}'")
     print(f"The host is '{hostname}'")
 

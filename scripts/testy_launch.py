@@ -100,6 +100,13 @@ def register_image_from_snapshot(image_name, architecture, snapshot_id):
     image_id = result.stdout.strip()
     return image_id
 
+def set_instance_name(instance_id, name):
+    result = local(f"aws ec2 create-tags \
+        --resources {instance_id} \
+        --tags Key=Name,Value={name}", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+
 def snapshot_exists(snapshot_id):
     result = local(f"aws ec2 describe-snapshots \
         --snapshot-ids {snapshot_id} \
@@ -112,27 +119,51 @@ def snapshot_exists(snapshot_id):
 
 def wait_instance_running(instance_id):
     print(f"Waiting for the EC2 instance '{instance_id}' to be running ...")
-    state = None
     # Code 16 corresponds to "running".
     expected_state = "16"
     max_retries = 20
     num_retry = 0
 
     while num_retry < max_retries:
-        result = local(f"aws ec2 describe-instances \
+        result = local(f"aws ec2 describe-instance-status \
             --instance-ids {instance_id} \
-            --query 'Reservations[*].Instances[*].State.Code' \
+            --query 'InstanceStatuses[*].InstanceState.Code' \
             --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(result.stderr)
         state = result.stdout.strip()
         if state != expected_state:
             num_retry += 1
-            time.sleep(5)
+            time.sleep(10)
         else:
             break
     else:
         raise Exit(f"Timeout: the instance {instance_id} is not running.")
+
+def wait_instance_status_check_ok(instance_id):
+    print(f"Waiting for the EC2 instance '{instance_id}' to pass the status check ...")
+    max_retries = 20
+    num_retry = 0
+
+    while num_retry < max_retries:
+        result = local(f"aws ec2 describe-instance-status \
+            --instance-ids {instance_id} \
+            --query 'InstanceStatuses[*].[InstanceStatus.Status,SystemStatus.Status]' \
+            --output text", hide=True, warn=True)
+        if result.stderr:
+            raise Exit(result.stderr)
+        checks = result.stdout.strip().split()
+
+        while True:
+            if not len(checks):
+                return
+            if checks[0] != 'ok':
+                break
+            checks.pop(0)
+        num_retry += 1
+        time.sleep(10)
+    else:
+        raise Exit(f"Timeout: the instance {instance_id} has not passed the status check yet.")
 
 # Launch an AWS instance given a distro.
 # This function returns a dictionary with a 'status' field that is set to 0 only when the instance
@@ -145,7 +176,7 @@ def testy_launch(distro):
 
     try:
         if not launch_template_exists(distro):
-            raise Exit(f"The distro {distro} does not exist.")
+            raise Exit(f"The distro '{distro}' does not exist.")
         
         # Launch an EC2 instance based on a template.
         result = local(f"aws ec2 run-instances \
@@ -158,14 +189,17 @@ def testy_launch(distro):
             raise Exit(result.stderr)
         instance_id = result.stdout.strip()
 
+        set_instance_name(instance_id, f"testy-{distro}-{instance_id}")
+
         hostname = get_hostname_for_instance(instance_id)
         user = get_value_from_launch_template(distro, 'User')
 
         wait_instance_running(instance_id)
+        wait_instance_status_check_ok(instance_id)
     except Exception as e:
         return {"status": 1, "msg": str(e).strip()}
 
-    return {"status": 0, "user":user, "hostname":hostname}
+    return {"status": 0, "user": user, "hostname": hostname}
 
 # Launch an AWS instance given a snapshot ID.
 # This function returns a dictionary with a 'status' field that is set to 0 only when the instance
@@ -207,11 +241,11 @@ def testy_launch_snapshot(snapshot_id):
             # We don't need to exit if this call fails.
             print(f"Error: {result.stderr}")
 
-        # Retrieve the user and the hostname.
+        set_instance_name(instance_id, f"testy-{launch_template_name}-{snapshot_id}")
+
         hostname = get_hostname_for_instance(instance_id)
         user = get_value_from_launch_template(launch_template_name, 'User')
 
-        # Wait for the instance to be running.
         wait_instance_running(instance_id)
     except Exception as e:
         return {"status": 1, "msg": str(e).strip()}
