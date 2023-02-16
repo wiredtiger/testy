@@ -439,9 +439,9 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable distros: \033[0m")
             if launch_templates:
                 for template in launch_templates:
-                    print(f'{template}')
+                    print(f"{template}")
             else:
-                print('No launch templates found.')
+                print("No launch templates found.")
 
     if snapshots:
         snapshots = None
@@ -453,9 +453,9 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable snapshots: \033[0m")
             if snapshots:
                 for snapshot in snapshots:
-                    print(f'{snapshot}')
+                    print(f"{snapshot}")
             else:
-                print('No snapshots found.')
+                print("No snapshots found.")
 
     if workloads:
         # The -H option is mandatory to list the workloads.
