@@ -355,13 +355,13 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
 
-# The workload function takes 2 optional arguments upload and describe. If no arguments are 
+# The workload function takes two optional arguments: upload and describe. If no arguments are
 # provided, the current workload is returned.
 @task
 def workload(c, upload=None, describe=None):
     """ Upload and describe workloads.
-    Up to 2 optional arguments can be taken at a time. If more than one option is specified at
-    once, they will be executed in the following order (regardless of order they are called): - 
+    Up to two optional arguments can be taken at a time. If more than one option is specified at
+    once, they will be executed in the following order (regardless of order they are called):
        1. upload
        2. describe
     If an option fails at any point, it will print an error message, exit the current option and 
@@ -423,14 +423,12 @@ def workload(c, upload=None, describe=None):
     
     return current_workload or None
 
-# The list function takes 3 optional arguments distros, snapshots and workloads.
-# If distros is True, the function lists all the available distros that can be used in the fab
-# launch function.
-# If snapshots is True, the function lists all the available snapshots that can be used in the fab
-# launch_snapshot function.
-# If workloads is True, the function lists the available workloads in the workloads directory and
-# highlights the current workload. Note that this can only be executed on the remote host using the
-# -H option, i.e fab -H <user>@<hostname> list --workloads.
+# The list function takes three optional arguments: distros, snapshots and workloads.
+#    --distros    List the available distributions for launching a testy server.
+#    --snapshots  List the snaphots created from scheduled backups, validation failure,
+#                 and wiredtiger failure.
+#    --workloads  List the workloads available on the specified testy server. The -H
+#                 option is required.
 @task
 def list(c, distros=False, snapshots=False, workloads=False):
     if distros:
