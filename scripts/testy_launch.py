@@ -148,7 +148,6 @@ def wait_instance_status_check_ok(instance_id):
         while True:
             if not len(checks):
                 return
-            print("Check is", checks[0])
             if checks[0] != 'ok':
                 break
             checks.pop(0)
