@@ -9,7 +9,8 @@ from invoke.exceptions import Exit
 from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
-from scripts.testy_launch import testy_launch, testy_launch_snapshot
+from scripts.testy_launch import get_launch_templates, get_snapshots, testy_launch, \
+    testy_launch_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
 wiredtiger = "\033[1;33mwiredtiger\033[0m"
@@ -352,16 +353,15 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
 
-# The workload function takes 3 optional arguments upload, list, describe. If no arguments are 
+# The workload function takes two optional arguments: upload and describe. If no arguments are
 # provided, the current workload is returned.
 @task
-def workload(c, upload=None, list=False, describe=None):
-    """ Upload, list, and describe workloads. 
-    Up to three optional arguments can be taken at a time. If more than one option is specified at
-    once, they will be executed in the following order (regardless of order they are called): - 
+def workload(c, upload=None, describe=None):
+    """ Upload and describe workloads.
+    Up to two optional arguments can be taken at a time. If more than one option is specified at
+    once, they will be executed in the following order (regardless of order they are called):
        1. upload
-       2. list
-       3. describe
+       2. describe
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
     """
@@ -401,19 +401,6 @@ def workload(c, upload=None, list=False, describe=None):
                     print(f"Failed to add '{workload_name}'.")
                 c.sudo(f"rm -f {src} /tmp/{upload}")
 
-    # Lists the available workloads in the workloads directory and highlights the current workload.
-    if list:
-        command = "ls " + get_value(c, "application", "workload_dir")
-        result = c.sudo(command, user=user, warn=True, hide=True)
-        if result.ok:
-            print("\n\033[1mAvailable workloads: \033[0m")
-            if current_workload:
-                result.stdout = re.sub(r"(?<!-)\b%s(?!-)\b" % current_workload, \
-                    f"\033[1;35m{current_workload} (active)\033[0m", result.stdout)
-            print(result.stdout)
-        else:
-            print(result.stderr)
-
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
     if describe:
@@ -426,13 +413,72 @@ def workload(c, upload=None, list=False, describe=None):
             print(f"No description provided for workload '{describe}'.")
     
     # If no option has been specified, print the current workload and return as usual.  
-    if not describe and not upload and not list:
+    if not describe and not upload:
         if current_workload:
             print(f"The current workload is {current_workload}.")
         else: 
             print("The current workload is unspecified.")
     
     return current_workload or None
+
+# The list function takes three optional arguments: distros, snapshots and workloads.
+#    --distros    List the available distributions for launching a testy server.
+#    --snapshots  List the snaphots created from scheduled backups, validation failure,
+#                 and wiredtiger failure.
+#    --workloads  List the workloads available on the specified testy server. The -H
+#                 option is required.
+@task
+def list(c, distros=False, snapshots=False, workloads=False):
+    if distros:
+        launch_templates = None
+        try:
+            launch_templates = get_launch_templates()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        else:
+            print("\n\033[1mAvailable distros: \033[0m")
+            if launch_templates:
+                for template in launch_templates:
+                    print(f"{template}")
+            else:
+                print("No launch templates found.")
+
+    if snapshots:
+        snapshots = None
+        try:
+            snapshots = get_snapshots()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        else:
+            print("\n\033[1mAvailable snapshots: \033[0m")
+            if snapshots:
+                for snapshot in snapshots:
+                    print(f"{snapshot}")
+            else:
+                print("No snapshots found.")
+
+    if workloads:
+        # The -H option is mandatory to list the workloads.
+        if type(c) is not Connection:
+            print("Please specify the testy server with the -H option to list the workloads.")
+            return
+
+        current_workload = get_value(c, "application", "current_workload")
+        user = get_value(c, "application", "user")
+        command = "ls " + get_value(c, "application", "workload_dir")
+
+        result = c.sudo(command, user=user, warn=True, hide=True)
+        if result.ok:
+            print("\n\033[1mAvailable workloads: \033[0m")
+            if current_workload:
+                result.stdout = re.sub(r"(?<!-)\b%s(?!-)\b" % current_workload, \
+                    f"\033[1;35m{current_workload} (active)\033[0m", result.stdout)
+            print(result.stdout)
+        else:
+            print(result.stderr)
+
+    if not workloads:
+        print()
 
 # Print information about the testy framework including testy and WiredTiger branch and commit hash,
 # current workload, testy service status and the WiredTiger version. 
