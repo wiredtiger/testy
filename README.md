@@ -18,7 +18,7 @@ Running testy requires two machines: a local machine from which to run the `fab`
 
 ## Running testy
 
-You can upload a [workload](#using-fab-workload) or use an existing workload in the testy framework. If the workload requires the database to be populated before starting, do this first. If either process fails, an error message will be returned.
+You can upload a [workload](#using-fab-workload) or use an existing workload in the testy framework. If the workload requires the database to be populated before starting, do this first. If either process fails, an error message is returned.
 
 - The `populate` function takes a required workload argument. This function executes on the the `populate()` function as defined in the workload interface file to populate the database required for the workload. 
 
@@ -29,25 +29,25 @@ You can upload a [workload](#using-fab-workload) or use an existing workload in 
   fab -H user@host start <workload>
   ```
 
-If a workload is already running, the start function will not work. Either call `restart` or `stop`. 
+If a workload is already running, the start function does not work. Either call `restart` or `stop`.
 
-- The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload will be used for the new run. The restart function will also run `validate()` as implemented by the user's workload interface file. If this is not successful, an error message will be returned and restart will be aborted. 
+- The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload is used for the new run. The restart function also runs `validate()` as implemented by the user's workload interface file. If this is not successful, an error message is returned and restart is aborted. 
   ```
   fab -H user@host restart [workload]
   ```
 
-- The `stop` function does not take any arguments and will stop the running workload and testy framework.
+- The `stop` function does not take any arguments and stops the running workload and testy framework.
   ```
   fab -H user@host stop
   ```
 
--  The `info` function allows you to see information relating to the testy service. This function will print the current wiredtiger and testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
+-  The `info` function allows you to see information relating to the testy service. This function prints the current wiredtiger and testy branch and commit hash, the current workload, and the testy service status. This function takes no arguments.
   ```
   fab -H user@host info
   ```
 
 ## Using `fab workload`
-The workload function has two options: upload and describe. If no option is given it will return the current workload. Up to two options can be given at a time in any order but they will be executed in the order of (1) `upload` and (2) `describe`. If one option fails, an error message will be printed and the other options will continue to execute.
+The workload function has two options: upload and describe. If no option is given it returns the current workload. Up to two options can be given at a time in any order but they are be executed in the order of (1) `upload` and (2) `describe`. If one option fails, an error message is printed and the other options continue to execute.
 
   ```
   fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_workload_name]
@@ -56,17 +56,17 @@ The workload function has two options: upload and describe. If no option is give
   fab -H user@host workload
   ```
 
-- The `workload --upload` requires one argument, the compressed workload folder. The function will upload a workload from your local machine to the remote testy server. You will need an archive containing a `workload` directory with a workload interface file `{workload}.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This will extract the files in the framework's 'workloads' directory, inside a folder named after the workload. The function will print an error message on failure, and delete any traces of the failed upload from the remote server. 
+- The `workload --upload` requires one argument, the compressed workload folder. The function uploads a workload from your local machine to the remote testy server. You need an archive containing a `workload` directory with a workload interface file `{workload}.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This extracts the files in the framework's 'workloads' directory, inside a folder named after the workload. The function prints an error message on failure, and delete any traces of the failed upload from the remote server.
   ```
   fab -H user@host workload --upload=<workload.zip>
   ```
 
-- The `workload --list` function will list all available workloads on the testy server, highlighting the current workload selected. This option does not take any arguments. 
+- The `workload --list` function lists the available workloads on the testy server, highlighting the current workload selected. This option does not take any arguments.
   ```
   fab -H user@host workload --list
   ```
 
-- The `workload --describe` function takes an optional workload name as an argument and will describe the given workload. If no argument is given, the current workload will be used. If there is no current workload, an error message will be printed. This description will be implemented by the user in the workload's workload interface file `{workload}.sh`. If not implemented, the function will not be able to describe the workload. 
+- The `workload --describe` function takes an optional workload name as an argument and describes the given workload. If no argument is given, the current workload is used. If there is no current workload, an error message is printed. This description is implemented by the user in the workload's workload interface file `{workload}.sh`. If not implemented, the function prints a default message.
   ```
   fab -H user@host workload --describe=[workload]
 
@@ -75,19 +75,19 @@ The workload function has two options: upload and describe. If no option is give
   ```
 
 ## Using `fab list`
-The list function has three options: distros, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message will be printed and the other options will continue to execute.
+The list function has three options: distros, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message is printed and the other options continue to execute.
 
-- The `list --distros` command lists all available distros where a testy server can be installed through the `fab launch` command.
+- The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
   ```
   fab list --distros
   ```
 
-- The `list --snapshots` command lists all available snapshots that can be used through the `fab launch-snapshot` command.
+- The `list --snapshots` command lists the available snapshots that can be used through the `fab launch-snapshot` command.
   ```
   fab list --snapshots
   ```
 
-- The `fab list --workloads` command lists all available workloads on the testy server, highlighting the current workload selected. 
+- The `fab list --workloads` command lists the available workloads on the testy server, highlighting the current workload.
   ```
   fab -H user@hostname list --workloads
   ```
@@ -100,7 +100,7 @@ fab -H user@host install [--wiredtiger-branch=<wiredtiger_branch>] [--testy-bran
 ```
 By default, the WiredTiger branch is `develop` and the testy branch is `main`.
 
-The `update` function allows you update the wiredtiger and/or testy source on the remote host. This function can take two optional arguments, a WiredTiger branch and/or a testy branch and will update the current branch to these supplied branches. The `update` function will stop the current workload, update the branches and start the workload again in its function. If no arguments are provided, no updates will be made.
+The `update` function allows you update the wiredtiger and/or testy source on the remote host. This function can take two optional arguments, a WiredTiger branch and/or a testy branch and updates the current branch to these supplied branches. The `update` function stops the current workload, updates the branches and starts the workload again in its function. If no arguments are provided, nothing is done.
 ```
 fab -H user@host update [--wiredtiger-branch=branch] [--testy-branch=branch]
 ```
