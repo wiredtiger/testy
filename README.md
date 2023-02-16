@@ -61,11 +61,6 @@ The workload function has two options: upload and describe. If no option is give
   fab -H user@host workload --upload=<workload.zip>
   ```
 
-- The `workload --list` function lists the available workloads on the testy server, highlighting the current workload selected. This option does not take any arguments.
-  ```
-  fab -H user@host workload --list
-  ```
-
 - The `workload --describe` function takes an optional workload name as an argument and describes the given workload. If no argument is given, the current workload is used. If there is no current workload, an error message is printed. This description is implemented by the user in the workload's workload interface file `{workload}.sh`. If not implemented, the function prints a default message.
   ```
   fab -H user@host workload --describe=[workload]
