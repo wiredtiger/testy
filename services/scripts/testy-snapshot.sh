@@ -1,5 +1,9 @@
 #!/bin/bash
 
+export AWS_ACCESS_KEY_ID="ASIA4UGYBSSWONIUXWGM"
+export AWS_SECRET_ACCESS_KEY="1eE5C9+7MtIpid6EgqCL2euuUnjYGgknlJSRUplo"
+export AWS_SESSION_TOKEN="IQoJb3JpZ2luX2VjEP///////////wEaCXVzLWVhc3QtMSJHMEUCICl0fJevl8/yxQzt0kPTlZhvTMEfZS2WWP59MkxKwrcuAiEA9rDG78ej1ypj4U+zSj+N5437CMzfYlN4wQUh5Q3JsQ4qwgMImP//////////ARAAGgw4NjgwMzY0ODIyMjAiDJrlxajVvAuAVSh1ayqWA6wM8rxEaiLRT0svl5K2EaG8LsX7AQCsdblTLobdB9wX5FD3FbAe0S6XUgi0UVX/uBaDATuu8FXltLoXtS0EVZ39VX4SLi3orb5vgA/eLeytkw1SxOIolYfaQAJ9s765tRJsY4xPfAWwMx9dTH1fzt7B1dcyvbl7uMMN5JwfkI31clVxG4+77rugyJcVtRQjwa0JSbelT0+0fi8a85HslIHEKwID66wgpVTn3CCK+hl2srwE2LM6claycmEgIZDrbmes+85cleHTffVlXf8goeEcViJYgwBnI9GWOjmIELBX3zO49hwwmsAr04aGXyjC9F/k0S+viBX1kHetY+7/x+YWHmTrBZyxZDeSfwO/uPA0WnW5Jp9tvjDOCtFvtH31+uPMzghV/QMnwqRbcdlfwSxam+6ovbiaQHj8hI+NdqCQ33udBnLV/mpeSN5dn/SNlyrs95pU5GpG7ejkwJkg2g9trWWYy4djPyGJviLvEl8JNZyiB5yrGhvhWV6p5JFHMzaVkdqLsaoweu3W4uJlpBUv4PyCv1cw+9TKnwY6pgGCHK9G1fZD3fL0DZbEOWIPixCWCEGgrZQ5PrGmISeDoXjzAFqKCBa9T8+0Sbqy6nYqS5nWRqLpwkMwBTaFNY9eoGNSJP1MrUzBrhAM5t5XWIK08EoSsXKhyQcPuEGfhcjDU5vvX1/X8PeKs2WAa97gSoV5iFBdJ5ir2l112iuenbSeGtreAm7CeRhSSzXzXm5aB4jk+ybr1uV3Xe3QBeLibdLxRNrN"
+
 main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
@@ -52,20 +56,18 @@ main() {
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
     local _backup_volume_id
-    if create_volume_from_snapshot \
-      "$_backup_snapshot_id" "$_availability_zone" "$_tag_name_prefix" _backup_volume_id; then
+    if create_volume_from_snapshot "$_backup_snapshot_id" "$_availability_zone" "$_tag_name_prefix" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
-                mount_device "$_mount_point" _mount_device ); then
+                mount_device "${_device_name}1" "$_mount_point" ); then
             # Delete volume and exit on failure.
-            if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
+            if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
                 echo "Deleted volume '$_backup_volume_id'."
             fi
             exit 1
         fi
     else
-        echo "Error: Unable to create backup volume '$_backup_volume_id' " \
-             "from snapshot '$_backup_snapshot_id'."
+        echo "Error: Unable to create backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         exit 1
     fi
 
@@ -79,7 +81,7 @@ main() {
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
     # will keep the snapshot for debugging.
-    if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
+    if delete_volume "$_backup_volume_id" "$_device_name" "$_mount_point"; then
         echo "Deleted volume '$_backup_volume_id'."
     fi
 }
@@ -135,16 +137,10 @@ create_snapshot() {
     local _root_volume_id
     get_root_volume_id "$_instance_id" _root_volume_id
 
-    # Retrieve the platform of the instance.
-    local _platform
-    _platform=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
-        --query "Reservations[*].Instances[*].Tags[?Key==\`LaunchTemplateName\`].Value[]" --output text)
-
     # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
     printf -v tags %s "ResourceType=snapshot, Tags=[" \
 	    "{Key=Name,Value=${_tag_name_prefix}-snapshot}," \
 	    "{Key=Application,Value=testy}," \
-	    "{Key=LaunchTemplateName,Value=$_platform}," \
 	    "{Key=Validation,Value=pending}]"
 
     __snapshot_id=$(aws ec2 create-snapshot \
@@ -177,10 +173,11 @@ create_snapshot() {
         sleep $_wait_interval
         _snapshot_status=$(aws ec2 describe-snapshots \
             --snapshot-ids "$__snapshot_id" \
-		    --query "Snapshots[*].State" \
+		    --query "Snapshots[*].[State]" \
             --output text)
         ((_wait_time+=_wait_interval))
     done
+    source ${BASH_SOURCE%/*}/testy-metrics.sh $__snapshot_id 0
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
@@ -327,48 +324,34 @@ detach_volume() {
             --query "Volumes[*].State" \
             --output text)
         ((_wait_time+=_wait_interval))
-
     done
 }
     
 # Mount the EBS volume exposed by the specified device name at the specified mount point.
 mount_device()
 {
-    local _mount_point=$1
-    local -n __mount_device=$2
-
-    # Get the root device.
-    local _root_device
-    _root_device=$(findmnt -n -o SOURCE /)
-
-    # Get the filesystem of the root device.
-    local _fs
-    _fs=$(sudo blkid -o value -s TYPE "$_root_device")
-
-    # Get all devices of this filesystem type.
-    local _devices
-    _devices=$(sudo blkid -t TYPE="$_fs" -o device)
-
-    # Find the unmounted device.
-    for device in ${_devices[@]}; do
-        if ! findmnt -n $device &> /dev/null; then
-             __mount_device=$device
-        fi
-    done
+    local _device_name=$1
+    local _mount_point=$2
 
     # Check that device is present.
-    if [ -z "$__mount_device" ]; then
-        echo "Error: No unmounted device found."
+    if ! test -b "$_device_name"; then
+        echo "Error: '$_device_name' does not exist."
         return 1
     fi
 
     # Check that mount point is not in use.
     if mountpoint "$_mount_point" &> /dev/null; then
-        echo "Error: Mount point '$_mount_point' is in use."
-        return 1
+        if ! unmount_device "$_device_name" "$_mount_point"; then
+            return 1
+        fi
     fi
 
-    # XFS file systems need a special mount option if the UUID is not present.
+    local _fs_mount_pount
+    _fs_mount_pount=$(findmnt -n -o SOURCE /)
+
+    local _fs
+    _fs=$(blkid -o value -s TYPE "$_fs_mount_pount")
+
     local _mount_options="rw"
     if [ "$_fs" == "xfs" ]; then
         _mount_options+=",nouuid"
@@ -376,19 +359,20 @@ mount_device()
 
     # Mount device.
     sudo mkdir -p "$_mount_point"
-    if sudo mount -t "$_fs" -o "$_mount_options" "$__mount_device" "$_mount_point"; then
+    if sudo mount -t "$_fs" -o "$_mount_options" "$_device_name" "$_mount_point"; then
+        sudo chown -R testy:testy "$_mount_point"
         return 0
     fi
 
-    echo "Error: Failed to mount device '$__mount_device'."
+    echo "Error: Failed to mount device '$_device_name'."
     return 1
 }
 
 # Unmount the EBS volume exposed by the specified device name at the specified mount point.
 unmount_device()
 {
-    local _mount_point=$1
-    local _mount_device=$2
+    local _device_name=$1
+    local _mount_point=$2
 
     # Verify that the mount point is in use.
     if ! mountpoint "$_mount_point" &> /dev/null; then
@@ -397,14 +381,14 @@ unmount_device()
     fi
 
     # Check that device is present.
-    if ! test -b "$_mount_device"; then
-        echo "Error: '$_mount_device' does not exist."
+    if ! test -b "$_device_name"; then
+        echo "Error: '$_device_name' does not exist."
         return 1
     fi
 
     # Unmount device.
-    if ! sudo umount "$_mount_device"; then
-        echo "Error: Failed to unmount device '$_mount_device'."
+    if ! sudo umount "$_device_name"; then
+        echo "Error: Failed to unmount device '$_device_name'."
         return 1
     fi
 }
@@ -435,11 +419,11 @@ validate_database() {
 delete_volume() {
 
     local _volume_id=$1
-    local _mount_point=$2
-    local _mount_device=$3
+    local _device_name=$2
+    local _mount_point=$3
 
     # Unmount the device.
-    unmount_device "$_mount_point" "$_mount_device"
+    unmount_device "${_device_name}1" "$_mount_point"
 
     # Detach the volume.
     detach_volume "$_volume_id"
