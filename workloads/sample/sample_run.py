@@ -41,7 +41,7 @@ insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(
               Operation(Operation.OP_SLEEP, "30")
 insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
               Operation(Operation.OP_SLEEP, "60")
-insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
+insert_thread = Thread(5*insert_op_1 + 2*insert_op_2 + insert_op_3)
 
 # Perform updates at random using the pareto distribution. Make smaller updates more frequently
 # and large ones less frequently.
@@ -51,7 +51,7 @@ update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
             Value(1000*1024)) + Operation(Operation.OP_SLEEP, "30")
 update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
             Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
-update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
+update_thread = Thread(5*update_op_1 + 2*update_op_2 + update_op_3)
 
 # Insert single read.
 read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
@@ -61,7 +61,7 @@ read_thread = Thread(read_op)
 # Insert single delete.
 delete_op = Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1)) + \
 Operation(Operation.OP_SLEEP, "10")
-delete_thread = Thread(delete_op)
+delete_thread = Thread(2*delete_op)
 
 # Queries.
 txn_thread = Thread(txn(2*insert_op_1) + txn(2*update_op_1) +  txn(2*delete_op) +  txn(1*read_op))
@@ -76,15 +76,16 @@ workload.options.report_enabled = False
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
 
-# Create one table every 30 seconds when the database size is less than 120 GB.
+# Create one table every 30 seconds when the database size is less than 100 GB. Stop creating tables
+# when the database size goes beyond 120 GB.
 workload.options.create_interval = 30
 workload.options.create_count = 1
-workload.options.create_trigger = 120 * 1024
+workload.options.create_trigger = 100 * 1024
 workload.options.create_target = 120 * 1024
 
-# Drop five tables every 90 seconds when the database size exceeds 120 GB. Stop
+# Drop five tables every 30 seconds when the database size exceeds 120 GB. Stop
 # dropping tables when the database size goes below 80 GB.
-workload.options.drop_interval = 90
+workload.options.drop_interval = 30
 workload.options.drop_count = 5
 workload.options.drop_trigger = 120 * 1024
 workload.options.drop_target = 80 * 1024
