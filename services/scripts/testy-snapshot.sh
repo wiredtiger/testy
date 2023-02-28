@@ -173,7 +173,9 @@ create_snapshot() {
             --output text)
         ((_wait_time+=_wait_interval))
     done
-    source ${BASH_SOURCE%/*}/testy-metrics.sh $__snapshot_id 0
+    var=$(date +%s%3N)
+    aws logs put-log-events --log-group-name testy-logs --log-stream-name snapshot-id --log-events \
+    timestamp=$var,message="testy backup successful - new snapshot id: $__snapshot_id"
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
