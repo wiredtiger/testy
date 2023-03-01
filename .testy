@@ -12,15 +12,14 @@ script_dir         = ${home_dir}/scripts
 service_dir        = ${home_dir}/services
 workload_dir       = ${home_dir}/workloads
 service_script_dir = ${home_dir}/services/scripts
-
-git_url        = git@github.com:wiredtiger/testy.git
-parse_script   = ${script_dir}/testy_parse.py
-unpack_script  = ${script_dir}/testy_unpack.py
-testy_service  = ${service_dir}/testy-run@.service
-crash_service  = ${service_dir}/testy-crash@.service
-crash_timer    = ${service_dir}/testy-crash@.timer
-backup_service = ${service_dir}/testy-backup@.service
-backup_timer   = ${service_dir}/testy-backup@.timer
+parse_script       = ${script_dir}/testy_parse.py
+unpack_script      = ${script_dir}/testy_unpack.py
+testy_service      = ${service_dir}/testy-run@.service
+crash_service      = ${service_dir}/testy-crash@.service
+crash_timer        = ${service_dir}/testy-crash@.timer
+backup_service     = ${service_dir}/testy-backup@.service
+backup_timer       = ${service_dir}/testy-backup@.timer
+git_url            = git@github.com:wiredtiger/testy.git
 
 [wiredtiger]
 home_dir  = ${application:testy_dir}/wiredtiger

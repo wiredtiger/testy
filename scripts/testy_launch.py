@@ -1,7 +1,7 @@
-import time
+import json, sys, time
+from itertools import cycle
 from invoke import run as local
 from invoke.exceptions import Exit
-import sys
 
 def get_hostname_for_instance(instance_id):
     result = local(f"aws ec2 describe-instances \
@@ -54,28 +54,34 @@ def get_snapshot_status(snapshot_id):
     snapshot_status = result.stdout.strip()
     return snapshot_status
 
-def get_value_from_launch_template(launch_template_name, key):
-    result = local(f"aws ec2 describe-launch-templates \
-        --launch-template-name {launch_template_name} \
-        --query 'LaunchTemplates[*].Tags[?Key==`{key}`].Value[]' \
+def set_tag_for_resource(resource_id, key, value):
+    result = local(f"aws ec2 create-tags \
+        --resources {resource_id} \
+        --tags 'Key={key},Value={value}'", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+
+def get_tag_value_from_resource(resource_id, key):
+    result = local(f"aws ec2 describe-tags \
+        --filter 'Name=resource-id,Values={resource_id}' \
+        --query 'Tags[?Key==`{key}`].Value' \
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
     value = result.stdout.strip()
     if not value:
-        raise Exit(f"Error: Unable to retrieve '{key}' for '{launch_template_name}'")
+        raise Exit(f"Unable to retrieve value for key '{key} from resource '{resource_id}'")
     return value
 
-def get_value_from_snapshot(snapshot_id, key):
-    result = local(f"aws ec2 describe-snapshots \
-        --snapshot-ids {snapshot_id} \
-        --query 'Snapshots[*].Tags[?Key==`{key}`].Value[]' \
-        --output text", hide=True, warn=True)
+def get_volume_id_from_instance(instance_id):
+    result = local(f"aws ec2 describe-volumes \
+        --filters Name=attachment.instance-id,Values={instance_id} \
+        --query 'Volumes[*].VolumeId' --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
     value = result.stdout.strip()
     if not value:
-        raise Exit(f"Error: Unable to retrieve '{key}' for '{snapshot_id}'")
+        raise Exit(f"Unable to retrieve volume ID for instance '{instance_id}'")
     return value
 
 def launch_template_exists(launch_template_name):
@@ -92,20 +98,14 @@ def register_image_from_snapshot(image_name, architecture, snapshot_id):
     result = local("aws ec2 register-image \
         --name " + image_name + " \
         --root-device-name /dev/xvda \
-        --block-device-mappings '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"" + snapshot_id + "\"}}]' \
+        --block-device-mappings \
+          '[{\"DeviceName\":\"/dev/xvda\",\"Ebs\":{\"SnapshotId\":\"" + snapshot_id + "\"}}]' \
         --architecture " + architecture + " \
         --output text", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
     image_id = result.stdout.strip()
     return image_id
-
-def set_instance_name(instance_id, name):
-    result = local(f"aws ec2 create-tags \
-        --resources {instance_id} \
-        --tags Key=Name,Value={name}", hide=True, warn=True)
-    if result.stderr:
-        raise Exit(result.stderr)
 
 def snapshot_exists(snapshot_id):
     result = local(f"aws ec2 describe-snapshots \
@@ -117,140 +117,147 @@ def snapshot_exists(snapshot_id):
         raise Exit(result.stderr)
     return True if result.stdout.strip() else False
 
-def wait_instance_running(instance_id):
-    print(f"Waiting for the EC2 instance '{instance_id}' to be running ...")
-    # Code 16 corresponds to "running".
-    expected_state = "16"
-    max_retries = 20
-    num_retry = 0
+def wait_on_status_check(instance_id):
+    max_retries = 30
+    sleep_time = 10
+    retry = 0
 
-    while num_retry < max_retries:
-        result = local(f"aws ec2 describe-instance-status \
-            --instance-ids {instance_id} \
-            --query 'InstanceStatuses[*].InstanceState.Code' \
-            --output text", hide=True, warn=True)
-        if result.stderr:
-            raise Exit(result.stderr)
-        state = result.stdout.strip()
-        if state != expected_state:
-            num_retry += 1
-            time.sleep(10)
-        else:
-            break
-    else:
-        raise Exit(f"Timeout: the instance {instance_id} is not running.")
+    timer = cycle(['\\', '|', '/', '—'])
+    msg = f"Waiting for the status check to complete. This may take several minutes ..."
+    print("", end=f"{msg}\r", flush=True)
 
-def wait_instance_status_check_ok(instance_id):
-    print(f"Waiting for the EC2 instance '{instance_id}' to pass the status check ...")
-    max_retries = 20
-    num_retry = 0
+    while retry < max_retries:
 
-    while num_retry < max_retries:
         result = local(f"aws ec2 describe-instance-status \
             --instance-ids {instance_id} \
             --query 'InstanceStatuses[*].[InstanceStatus.Status,SystemStatus.Status]' \
-            --output text", hide=True, warn=True)
+            --output json", hide=True, warn=True)
         if result.stderr:
             raise Exit(result.stderr)
-        checks = result.stdout.strip().split()
 
-        while True:
-            if not len(checks):
-                return
-            if checks[0] != 'ok':
-                break
-            checks.pop(0)
-        num_retry += 1
-        time.sleep(10)
+        status = json.loads(result.stdout)
+        if (len(status) == 0 or len(status[0]) != 2):
+            continue
+        if status[0][0] == "ok" and status[0][1] == "ok":
+            print("", end=f"{msg} Success!\n", flush=True)
+            break
+        retry += 1
+        for _ in range (sleep_time):
+            print("", end=f"{msg} {next(timer)}\r", flush=True)
+            time.sleep(1)
+
     else:
-        raise Exit(f"Timeout: the instance {instance_id} has not passed the status check yet.")
+        print("", end=f"{msg} Timed out.\n", flush=True)
+        raise Exit(f"The status check failed to complete successfully after "
+            f"{max_retries*sleep_time} seconds. Please check the AWS console.")
 
 # Launch an AWS instance given a distro.
-# This function returns a dictionary with a 'status' field that is set to 0 only when the instance
-# has been launched successfully. In that case, the dictionary contains a 'user' and 'host' fields.
-# Upon failure, the 'status' field is not 0 and the 'msg' field contains the error message.
-def testy_launch(distro):
+# This function returns a dictionary with a 'status' field that is set to 0 when the instance
+# is launched successfully. In the successful case, the dictionary also contains information
+# about the newly launched instance. Upon failure, the 'status' field is non-zero and the 'msg'
+# field contains the error message.
+def launch_from_distro(distro):
 
-    user = None
+    if not launch_template_exists(distro):
+        return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
+
+    print("", end=f"\rCreating a {distro} testy server in EC2 ... ", flush=True)
     hostname = None
+    user = None
 
     try:
-        if not launch_template_exists(distro):
-            raise Exit(f"The distro '{distro}' does not exist.")
-        
         # Launch an EC2 instance based on a template.
         result = local(f"aws ec2 run-instances \
             --launch-template LaunchTemplateName={distro} \
-            --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-                {{Key=LaunchTemplateName,Value={distro}}}]' \
             --query Instances[*].InstanceId \
             --output text", hide=True, warn=True)
         if result.stderr:
+            print("Failed.", flush=True)
             raise Exit(result.stderr)
-        instance_id = result.stdout.strip()
 
-        set_instance_name(instance_id, f"testy-{distro}-{instance_id}")
+        print("Success!", flush=True)
+        instance_id = result.stdout.strip()
+        wait_on_status_check(instance_id)
+
+        # Add 'Name' tags for the new instance and volume.
+        volume_id = get_volume_id_from_instance(instance_id)
+        instance_name = f"testy-{distro}-{instance_id.replace('-','')}"
+        set_tag_for_resource(instance_id, "Name", instance_name)
+        set_tag_for_resource(volume_id, "Name", f"testy-{distro}-{volume_id.replace('-','')}")
 
         hostname = get_hostname_for_instance(instance_id)
-        user = get_value_from_launch_template(distro, 'User')
+        user = get_tag_value_from_resource(instance_id, "User")
 
-        wait_instance_running(instance_id)
-        wait_instance_status_check_ok(instance_id)
     except Exception as e:
+        print("Failed.", flush=True)
         return {"status": 1, "msg": str(e).strip()}
 
-    return {"status": 0, "user": user, "hostname": hostname}
+    return {"status": 0, "user": user, "hostname": hostname,
+        "instance_id": instance_id, "instance_name": instance_name}
 
-# Launch an AWS instance given a snapshot ID.
-# This function returns a dictionary with a 'status' field that is set to 0 only when the instance
-# has been launched successfully. In that case, the dictionary contains a 'user' and 'host' fields.
-# Upon failure, the 'status' field is not 0 and the 'msg' field contains the error message.
-def testy_launch_snapshot(snapshot_id):
+# Launch an AWS instance from a snapshot ID.
+# This function returns a dictionary with a 'status' field that is set to 0 when the instance
+# is launched successfully. In the successful case, the dictionary also contains information
+# about the newly launched instance. Upon failure, the 'status' field is non-zero and the 'msg'
+# field contains the error message.
+def launch_from_snapshot(snapshot_id):
+
+    if not snapshot_exists(snapshot_id):
+        return {"status": 1, "msg": f"The snapshot '{snapshot_id}' does not exist."}
+
+    print("", end=f"\rCreating a testy server from snapshot '{snapshot_id}' ... ", flush=True)
+    hostname = None
+    user = None
 
     try:
-        if not snapshot_exists(snapshot_id):
-            raise Exit(f"The snapshot {snapshot_id} does not exist.")
-
         snapshot_status = get_snapshot_status(snapshot_id)
         if snapshot_status != 'completed':
+            print("Failed.", flush=True)
             raise Exit(f"The snapshot '{snapshot_id}' is incomplete ({snapshot_status}).")
 
-        launch_template_name = get_value_from_snapshot(snapshot_id, 'LaunchTemplateName')
-        image_name = f"{launch_template_name}-{snapshot_id}"
+        image_name = f"image-{snapshot_id}"
         image_id = get_image_id(image_name)
 
         if not image_id:
-            architecture = get_value_from_launch_template(launch_template_name, 'Architecture')
+            architecture = get_tag_value_from_resource(snapshot_id, "Architecture")
             image_id = register_image_from_snapshot(image_name, architecture, snapshot_id)
 
         # Launch an EC2 instance based on a template and an image ID.
+        ltname = get_tag_value_from_resource(snapshot_id, "LaunchTemplateName")
         result = local(f"aws ec2 run-instances \
-            --launch-template LaunchTemplateName={launch_template_name} \
-            --tag-specifications 'ResourceType=instance, Tags=[{{Key=Application,Value=testy}}, \
-                {{Key=LaunchTemplateName,Value={launch_template_name}}}]' \
+            --launch-template LaunchTemplateName={ltname} \
             --image-id {image_id} \
             --query Instances[*].InstanceId \
             --output text", hide=True, warn=True)
         if result.stderr:
             raise Exit(result.stderr)
+
+        print("Success!", flush=True)
         instance_id = result.stdout.strip()
 
         # Always deregister the image.
         result = local(f"aws ec2 deregister-image --image-id {image_id}")
         if result.stderr:
             # We don't need to exit if this call fails.
-            print(f"Error: {result.stderr}")
+            print(f"Error deregistering image '{image_name}': {result.stderr}")
 
-        set_instance_name(instance_id, f"testy-{launch_template_name}-{snapshot_id}")
+        wait_on_status_check(instance_id)
+
+        # Add 'Name' tags for the new instance and volume.
+        volume_id = get_volume_id_from_instance(instance_id)
+        instance_name = f"testy-{ltname}-{instance_id.replace('-','')}"
+        set_tag_for_resource(instance_id, "Name", instance_name)
+        set_tag_for_resource(volume_id, "Name", f"testy-{ltname}-{volume_id.replace('-','')}")
 
         hostname = get_hostname_for_instance(instance_id)
-        user = get_value_from_launch_template(launch_template_name, 'User')
+        user = get_tag_value_from_resource(instance_id, "User")
 
-        wait_instance_running(instance_id)
     except Exception as e:
+        print("Failed.", flush=True)
         return {"status": 1, "msg": str(e).strip()}
 
-    return {"status": 0, "user":user, "hostname":hostname}
+    return {"status": 0, "user": user, "hostname": hostname,
+        "instance_id": instance_id, "instance_name": instance_name}
 
 if __name__ == "__main__":
 

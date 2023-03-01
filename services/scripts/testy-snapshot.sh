@@ -1,20 +1,21 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
     local _validation_script=${_mount_point}${1}
-    local _tag_name_prefix=$2
 
     local _aws_endpoint
     local _instance_id
     local _availability_zone
 
     _aws_endpoint="http://169.254.169.254/latest/meta-data/"
-    _instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
-    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
+    #_instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
+    #_availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
+    _instance_id=i-079587865bf160bec
+    _availability_zone=ap-southeast-2c
 
-    echo "Starting database backup for instance '$_instance_id'."
+    echo "Starting database backup for instance '$_instance_id' ..."
 
     # Verify the instance exists.
     local _instance_exists
@@ -41,9 +42,16 @@ main() {
         exit 1
     fi
 
+    # Retrieve the tags from the instance.
+    local _tags
+    _tags=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
+        --query "Reservations[*].Instances[*].Tags[][]" --output json)
+    _tags="${_tags//\"/}"
+    _tags="${_tags//:/=}"
+
     # Create a snapshot backup of the root volume.
     local _backup_snapshot_id
-    if ! create_snapshot "$_instance_id" "$_tag_name_prefix" _backup_snapshot_id; then
+    if ! create_snapshot "$_instance_id" "$_tags" _backup_snapshot_id; then
         echo "Error: Unable to create a snapshot for instance '$_instance_id'."
         exit 1
     fi
@@ -53,7 +61,7 @@ main() {
     # and mount the device at the specificed mount point.
     local _backup_volume_id
     if create_volume_from_snapshot \
-      "$_backup_snapshot_id" "$_availability_zone" "$_tag_name_prefix" _backup_volume_id; then
+      "$_backup_snapshot_id" "$_availability_zone" "$_tags" _backup_volume_id; then
         echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
         if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
                 mount_device "$_mount_point" _mount_device ); then
@@ -70,6 +78,9 @@ main() {
     fi
 
     # Validate database. Update the snapshot status on success/failure.
+    aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
+                        --tags Key=Validation,Value=none
+
     echo "Running validation script '$_validation_script' on volume '$_backup_volume_id'."
     if validate_database "$_validation_script" "$_backup_snapshot_id" "$_backup_volume_id"; then
         echo "Successfully validated database backup snapshot '$_backup_snapshot_id'."
@@ -129,28 +140,18 @@ get_root_volume_id() {
 create_snapshot() {
 
     local _instance_id=$1
-    local _tag_name_prefix=$2
+    local _tags=$2
     local -n __snapshot_id=$3
 
     local _root_volume_id
     get_root_volume_id "$_instance_id" _root_volume_id
 
-    # Retrieve the platform of the instance.
-    local _platform
-    _platform=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
-        --query "Reservations[*].Instances[*].Tags[?Key==\`LaunchTemplateName\`].Value[]" --output text)
-
-    # Create the snapshot. Tag the snapshot with a name, timestamp, and validation status.
-    printf -v tags %s "ResourceType=snapshot, Tags=[" \
-	    "{Key=Name,Value=${_tag_name_prefix}-snapshot}," \
-	    "{Key=Application,Value=testy}," \
-	    "{Key=LaunchTemplateName,Value=$_platform}," \
-	    "{Key=Validation,Value=pending}]"
-
+    # Create the snapshot with the specified tags.
+    printf -v _tag_spec %s "ResourceType=snapshot, Tags=${_tags}"
     __snapshot_id=$(aws ec2 create-snapshot \
         --volume-id "$_root_volume_id" \
-        --tag-specifications "${tags}" \
-        --description "$_tag_name_prefix snapshot" \
+        --tag-specifications "${_tag_spec}" \
+        --description "testy snapshot for $_instance_id" \
         --query "SnapshotId" \
         --output text)
 
@@ -158,6 +159,14 @@ create_snapshot() {
         echo "Error: Failed to create snapshot for instance '$_instance_id'."
         return 1
     fi
+
+    # Update snapshot name.
+    local _ltname
+    _ltname=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
+        --query "Reservations[*].Instances[*].Tags[?Key==\`LaunchTemplateName\`].Value" \
+        --output text)
+    aws ec2 create-tags --resources "$__snapshot_id" \
+        --tags "Key=Name,Value=testy-${_ltname}-${__snapshot_id//-/}"
 
     # Wait for the snapshot to complete and be ready for use. Return an error after
     # 10 minutes.
@@ -189,19 +198,15 @@ create_volume_from_snapshot() {
 
     local _snapshot_id=$1
     local _availability_zone=$2
-    local _tag_name_prefix=$3
+    local _tags=$3
     local -n __snapshot_volume_id=$4
 
-    # Create a volume using the snapshot.
-    printf -v tags %s "ResourceType=volume, Tags=[" \
-	    "{Key=Name,Value=${_tag_name_prefix}-volume}," \
-	    "{Key=Application,Value=testy}," \
-        "{Key=Validation,Value=pending}]"
-
+    # Create the snapshot with the specified tags.
+    printf -v _tag_spec %s "ResourceType=volume, Tags=${_tags}"
     __snapshot_volume_id=$(aws ec2 create-volume \
         --snapshot-id "$_snapshot_id" \
         --availability-zone "$_availability_zone" \
-        --tag-specifications "${tags}" \
+        --tag-specifications "${_tag_spec}" \
         --query "VolumeId" \
         --output text)
 
@@ -210,6 +215,14 @@ create_volume_from_snapshot() {
              "availability zone '$_availability_zone'."
         return 1
     fi
+
+    # Update volume name.
+    local _ltname
+    _ltname=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
+        --query "Reservations[*].Instances[*].Tags[?Key==\`LaunchTemplateName\`].Value" \
+        --output text)
+    aws ec2 create-tags --resources "$__snapshot_volume_id" \
+        --tags "Key=Name,Value=testy-${_ltname}-${__snapshot_volume_id//-/}"
 
     # Check that the volume status is "ok". Wait up to 10 minutes.
     local _snapshot_volume_status=
@@ -418,7 +431,7 @@ validate_database() {
     local _volume_id=$2
 
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
-                        --tags Key=Validation,Value=in-progress
+                        --tags Key=Validation,Value=incomplete
 
     if "$_validation_script" validate; then
         aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \

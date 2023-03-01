@@ -1,16 +1,14 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import os, re, configparser as cp
+import configparser as cp, os, re, time
 from contextlib import redirect_stdout
-import time
-from paramiko.ssh_exception import NoValidConnectionsError
 from invoke.exceptions import Exit
 from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
-from scripts.testy_launch import get_launch_templates, get_snapshots, testy_launch, \
-    testy_launch_snapshot
+from scripts.testy_launch import get_launch_templates, get_snapshots, launch_from_distro, \
+    launch_from_snapshot
 
 testy = "\033[1;36mtesty\033[0m"
 testy_config = ".testy"
@@ -19,6 +17,55 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 # ---------------------------------------------------------------------------------------
 # Tasks
 # ---------------------------------------------------------------------------------------
+
+# Launch an AWS instance and install testy using the given WiredTiger and testy branches.
+@task
+def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
+
+    result = launch_from_distro(distro)
+    if result['status'] != 0:
+        print(f"Launch failed. {result['msg']}")
+        return
+
+    user = result['user']
+    hostname = result['hostname']
+
+    try:
+        with Connection(f"{user}@{hostname}") as conn:
+            install(conn, wiredtiger_branch, testy_branch)
+    except Exception as e:
+        print(f"The EC2 instance was launched sucessfully but the testy "
+              f"installation failed: {e}")
+
+    # Print summary on success.
+    print("\n~~~~~~~~~~~~~~")
+    print(f"Launch Summary")
+    print("~~~~~~~~~~~~~~")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
+    print(f"The instance id is '{result['instance_id']}'")
+    print(f"The instance name is '{result['instance_name']}'\n")
+
+# Launch an AWS instance using a snapshot.
+@task
+def launch_snapshot(c, snapshot_id):
+
+    result = launch_from_snapshot(snapshot_id)
+    if result['status'] != 0:
+        print(f"Launch failed. {result['msg']}")
+        return
+
+    user = result['user']
+    hostname = result['hostname']
+
+    # Print summary on success.
+    print("\n~~~~~~~~~~~~~~")
+    print(f"Launch Summary")
+    print("~~~~~~~~~~~~~~")
+    print(f"The user is '{user}'")
+    print(f"The host is '{hostname}'")
+    print(f"The instance id is '{result['instance_id']}'")
+    print(f"The instance name is '{result['instance_name']}'\n")
 
 # Install the testy framework.
 @task
@@ -118,67 +165,6 @@ def populate(c, workload):
         print(f"populate succeeded for workload '{workload}'")
     else:
         print(f"populate failed for workload '{workload}'")
-
-# Launch an AWS instance and install testy using the given WiredTiger and testy branches.
-@task
-def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
-
-    print(f"Launching a testy server in EC2 for '{distro}' ...")
-
-    result = testy_launch(distro)
-    if result['status'] != 0:
-        print(f"Launch failed. {result['msg']}")
-        return
-
-    user = result['user']
-    hostname = result['hostname']
-    host = f"{user}@{hostname}"
-
-    max_retries = 10
-    num_retry = 0
-    exception = None
-    with Connection(host) as conn:
-        while num_retry < max_retries:
-            try:
-                # Give the host some time.
-                time.sleep(10)
-                install(conn, wiredtiger_branch, testy_branch)
-            except NoValidConnectionsError as e:
-                num_retry += 1
-                exception = e
-                continue
-            break
-        else:
-            print(f"Launch failed. {exception}")
-            return
-
-    # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~")
-    print(f"Launch succeeded!")
-    print("~~~~~~~~~~~~~~~~~")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
-
-# Launch an AWS instance using a snapshot.
-@task
-def launch_snapshot(c, snapshot_id):
-
-    print(f"Launching an EC2 instance using the snapshot '{snapshot_id}' ...")
-
-    result = testy_launch_snapshot(snapshot_id)
-    if result['status'] != 0:
-        print(f"Launch failed. {result['msg']}")
-        return
-
-    user = result['user']
-    hostname = result['hostname']
-
-    # Print summary on success.
-    print("\n~~~~~~~~~~~~~~~~~")
-    print(f"Launch succeeded!")
-    print("~~~~~~~~~~~~~~~~~")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
