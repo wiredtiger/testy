@@ -151,11 +151,16 @@ def wait_on_status_check(instance_id):
         raise Exit(f"The status check failed to complete successfully after "
             f"{max_retries*sleep_time} seconds. Please check the AWS console.")
 
+# The following two functions are called from the fabfile and implement launching an
+# instance in AWS EC2 from either a launch template (analogous to an Evergreen "distro")
+# or from a snapshot ID. The functions return a python dictionary that contains information
+# relevant to the user executing the fab commands. The dictionary always includes the exit
+# status of the function, which is zero on success and non-zero on failure. On success,
+# the dictionary contains the necessary information for the user to log in to the
+# instance via ssh and identify the instance on the AWS console. On failure, the dictionary
+# contains a user-friendly error message.
+
 # Launch an AWS instance given a distro.
-# This function returns a dictionary with a 'status' field that is set to 0 when the instance
-# is launched successfully. In the successful case, the dictionary also contains information
-# about the newly launched instance. Upon failure, the 'status' field is non-zero and the 'msg'
-# field contains the error message.
 def launch_from_distro(distro):
 
     if not launch_template_exists(distro):
@@ -196,10 +201,6 @@ def launch_from_distro(distro):
         "instance_id": instance_id, "instance_name": instance_name}
 
 # Launch an AWS instance from a snapshot ID.
-# This function returns a dictionary with a 'status' field that is set to 0 when the instance
-# is launched successfully. In the successful case, the dictionary also contains information
-# about the newly launched instance. Upon failure, the 'status' field is non-zero and the 'msg'
-# field contains the error message.
 def launch_from_snapshot(snapshot_id):
 
     if not snapshot_exists(snapshot_id):
