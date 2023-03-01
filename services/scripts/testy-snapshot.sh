@@ -10,10 +10,8 @@ main() {
     local _availability_zone
 
     _aws_endpoint="http://169.254.169.254/latest/meta-data/"
-    #_instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
-    #_availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
-    _instance_id=i-079587865bf160bec
-    _availability_zone=ap-southeast-2c
+    _instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
+    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
 
     echo "Starting database backup for instance '$_instance_id' ..."
 
