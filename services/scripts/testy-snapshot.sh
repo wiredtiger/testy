@@ -44,6 +44,9 @@ main() {
     local _tags
     _tags=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
         --query "Reservations[*].Instances[*].Tags[][]" --output json)
+    # The json output from the aws cli call is not in the correct format for input to
+    # an aws cli call. We need to strip the double quotes from the output and replace
+    # the colons with equal signs.
     _tags="${_tags//\"/}"
     _tags="${_tags//:/=}"
 
