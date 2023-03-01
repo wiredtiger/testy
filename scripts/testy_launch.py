@@ -128,6 +128,13 @@ def wait_on_status_check(instance_id):
 
     while retry < max_retries:
 
+        # AWS reports two statuses on EC2 instances, a "system status" and an "instance
+        # status", to identify hardware and software issues. When an instance is launched,
+        # the below aws cli call returns an empty list ([]) until the instance is running.
+        # Once the instance is running, the cli returns a nested list containing a text
+        # description of the two statuses, e.g. [['initializing', 'initializing']]. The
+        # instance is ready for use when both status checks have passed, which is reflected
+        # by the cli output of [['ok', 'ok']].
         result = local(f"aws ec2 describe-instance-status \
             --instance-ids {instance_id} \
             --query 'InstanceStatuses[*].[InstanceStatus.Status,SystemStatus.Status]' \
