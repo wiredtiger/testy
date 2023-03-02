@@ -118,7 +118,7 @@ def snapshot_exists(snapshot_id):
     return True if result.stdout.strip() else False
 
 def wait_on_status_check(instance_id):
-    max_retries = 30
+    max_retries = 60
     sleep_time = 10
     retry = 0
 
@@ -201,7 +201,6 @@ def launch_from_distro(distro):
         user = get_tag_value_from_resource(instance_id, "User")
 
     except Exception as e:
-        print("Failed.", flush=True)
         return {"status": 1, "msg": str(e).strip()}
 
     return {"status": 0, "user": user, "hostname": hostname,
@@ -261,7 +260,6 @@ def launch_from_snapshot(snapshot_id):
         user = get_tag_value_from_resource(instance_id, "User")
 
     except Exception as e:
-        print("Failed.", flush=True)
         return {"status": 1, "msg": str(e).strip()}
 
     return {"status": 0, "user": user, "hostname": hostname,
