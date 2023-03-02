@@ -70,7 +70,7 @@ def get_tag_value_from_resource(resource_id, key):
         raise Exit(result.stderr)
     value = result.stdout.strip()
     if not value:
-        raise Exit(f"Unable to retrieve value for key '{key} from resource '{resource_id}'")
+        raise Exit(f"Unable to retrieve value for key '{key}' from resource '{resource_id}'")
     return value
 
 def get_volume_id_from_instance(instance_id):
