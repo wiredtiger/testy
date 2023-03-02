@@ -51,30 +51,31 @@ main() {
     _tags="${_tags//:/=}"
 
     # Create a snapshot backup of the root volume.
-    local _backup_snapshot_id
-    if ! create_snapshot "$_instance_id" "$_tags" _backup_snapshot_id; then
+    local _snapshot_id
+    if ! create_snapshot "$_instance_id" "$_tags" _snapshot_id; then
         echo "Error: Unable to create a snapshot for instance '$_instance_id'."
         exit 1
     fi
-    echo "Created backup snapshot '$_backup_snapshot_id'."
+    echo "Created backup snapshot '$_snapshot_id'."
 
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
-    local _backup_volume_id
+    local _volume_id
     if create_volume_from_snapshot \
-      "$_backup_snapshot_id" "$_availability_zone" "$_tags" _backup_volume_id; then
-        echo "Created backup volume '$_backup_volume_id' from snapshot '$_backup_snapshot_id'."
-        if ! ( attach_volume "$_instance_id" "$_backup_volume_id" "$_device_name" &&
+      "$_snapshot_id" "$_availability_zone" "$_instance_id" "$_tags" _volume_id
+    then
+        echo "Created backup volume '$_volume_id' from snapshot '$_snapshot_id'."
+        if ! ( attach_volume "$_instance_id" "$_volume_id" "$_device_name" &&
                 mount_device "$_mount_point" _mount_device ); then
             # Delete volume and exit on failure.
-            if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
-                echo "Deleted volume '$_backup_volume_id'."
+            if delete_volume "$_volume_id" "$_mount_point" "$_mount_device"; then
+                echo "Deleted volume '$_volume_id'."
             fi
             exit 1
         fi
     else
-        echo "Error: Unable to create backup volume '$_backup_volume_id' " \
-             "from snapshot '$_backup_snapshot_id'."
+        echo "Error: Unable to create backup volume '$_volume_id' " \
+             "from snapshot '$_snapshot_id'."
         exit 1
     fi
 
@@ -82,22 +83,25 @@ main() {
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
                         --tags Key=Validation,Value=none
 
-    echo "Running validation script '$_validation_script' on volume '$_backup_volume_id'."
-    var=$(date +%s%3N)
-    if validate_database "$_validation_script" "$_backup_snapshot_id" "$_backup_volume_id"; then
-        echo "Successfully validated database backup snapshot '$_backup_snapshot_id'."
-        aws logs put-log-events --log-group-name testy-logs --log-stream-name testy-logs --log-events \
-        timestamp=$var,message="Database validation succeeded for backup snapshot $_backup_snapshot_id"
+    echo "Running validation script '$_validation_script' on volume '$_volume_id'."
+    if validate_database "$_validation_script" "$_snapshot_id" "$_volume_id"; then
+        echo "Successfully validated database backup snapshot '$_snapshot_id'."
+        aws logs put-log-events --log-group-name testy-logs \
+                                --log-stream-name testy-logs --log-events \
+            timestamp=$var, \
+            message="Validation succeeded for backup snapshot $_snapshot_id"
     else
-        echo "Validation failed for database backup snapshot '$_backup_snapshot_id'."
-        aws logs put-log-events --log-group-name testy-logs --log-stream-name testy-logs --log-events \
-        timestamp=$var,message="Database validation failed for backup snapshot $_backup_snapshot_id"
+        echo "Validation failed for database backup snapshot '$_snapshot_id'."
+        aws logs put-log-events --log-group-name testy-logs \
+                                --log-stream-name testy-logs --log-events \
+            timestamp=$var, \
+            message="Validation failed for backup snapshot $_snapshot_id"
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
     # will keep the snapshot for debugging.
-    if delete_volume "$_backup_volume_id" "$_mount_point" "$_mount_device"; then
-        echo "Deleted volume '$_backup_volume_id'."
+    if delete_volume "$_volume_id" "$_mount_point" "$_mount_device"; then
+        echo "Deleted volume '$_volume_id'."
     fi
 }
 
@@ -187,7 +191,8 @@ create_snapshot() {
             echo "Error: Waited $_wait_timeout seconds for snapshot '$__snapshot_id'" \
                  "to complete." 
             var=$(date +%s%3N)
-            aws logs put-log-events --log-group-name testy-logs --log-stream-name snapshot-id --log-events \
+            aws logs put-log-events --log-group-name testy-logs \
+                                    --log-stream-name snapshot-id --log-events \
             timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
             return 1
         fi
@@ -200,7 +205,8 @@ create_snapshot() {
         ((_wait_time+=_wait_interval))
     done
     var=$(date +%s%3N)
-    aws logs put-log-events --log-group-name testy-logs --log-stream-name snapshot-id --log-events \
+    aws logs put-log-events --log-group-name testy-logs \
+                            --log-stream-name snapshot-id --log-events \
     timestamp=$var,message="testy backup successful - new snapshot id: $__snapshot_id"
 }
 
@@ -210,8 +216,9 @@ create_volume_from_snapshot() {
 
     local _snapshot_id=$1
     local _availability_zone=$2
-    local _tags=$3
-    local -n __snapshot_volume_id=$4
+    local _instance_id=$3
+    local _tags=$4
+    local -n __snapshot_volume_id=$5
 
     # Create the snapshot with the specified tags.
     printf -v _tag_spec %s "ResourceType=volume, Tags=${_tags}"
