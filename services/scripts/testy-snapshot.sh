@@ -71,8 +71,14 @@ main() {
     echo "Running validation script '$_validation_script' on volume '$_backup_volume_id'."
     if validate_database "$_validation_script" "$_backup_snapshot_id" "$_backup_volume_id"; then
         echo "Successfully validated database backup snapshot '$_backup_snapshot_id'."
+        var=$(date +%s%3N)
+        aws logs put-log-events --log-group-name testy-logs --log-stream-name testy-logs --log-events \
+        timestamp=$var,message="Database validation succeeded for backup snapshot $_backup_snapshot_id"
     else
         echo "Validation failed for database backup snapshot '$_backup_snapshot_id'."
+        var=$(date +%s%3N)
+        aws logs put-log-events --log-group-name testy-logs --log-stream-name testy-logs --log-events \
+        timestamp=$var,message="Database validation failed for backup snapshot $_backup_snapshot_id"
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
@@ -148,6 +154,9 @@ create_snapshot() {
 
     if [ -z "$__snapshot_id" ]; then
         echo "Error: Failed to create snapshot for instance '$_instance_id'."
+        var=$(date +%s%3N)
+        aws logs put-log-events --log-group-name testy-logs --log-stream-name snapshot-id --log-events \
+        timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
         return 1
     fi
 
@@ -163,6 +172,10 @@ create_snapshot() {
         if [ $_wait_time -gt $_wait_timeout ]; then
             echo "Error: Waited $_wait_timeout seconds for snapshot '$__snapshot_id'" \
                  "to complete."
+
+            var=$(date +%s%3N)
+            aws logs put-log-events --log-group-name testy-logs --log-stream-name snapshot-id --log-events \
+            timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
             return 1
         fi
 
