@@ -16,7 +16,7 @@ ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh
 
 # Make sure the timer is enabled before restarting the testy workload.
 ExecStartPost=/bin/bash -c 'systemctl is-enabled testy-crash@%I.timer'
-ExecStartPost=/bin/bash -c 'systemctl start testy-run@%I.service'
+ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
 #ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_test_status $EXIT_STATUS'
 
 TimeoutSec=3600s
