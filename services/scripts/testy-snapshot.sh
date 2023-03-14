@@ -84,6 +84,7 @@ main() {
                         --tags Key=Validation,Value=none
 
     echo "Running validation script '$_validation_script' on volume '$_volume_id'."
+    var=$(date +%s%3N)
     if validate_database "$_validation_script" "$_snapshot_id" "$_volume_id"; then
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
