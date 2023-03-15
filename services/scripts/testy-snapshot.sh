@@ -84,17 +84,18 @@ main() {
                         --tags Key=Validation,Value=none
 
     echo "Running validation script '$_validation_script' on volume '$_volume_id'."
+    var=$(date +%s%3N)
     if validate_database "$_validation_script" "$_snapshot_id" "$_volume_id"; then
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var, \
+            timestamp="$var", \
             message="Validation succeeded for backup snapshot $_snapshot_id"
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var, \
+            timestamp="$var", \
             message="Validation failed for backup snapshot $_snapshot_id"
     fi
 
@@ -193,7 +194,7 @@ create_snapshot() {
             var=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
+            timestamp="$var",message="testy backup failed for snapshot id: $__snapshot_id"
             return 1
         fi
 
@@ -207,7 +208,7 @@ create_snapshot() {
     var=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp=$var,message="testy backup successful - new snapshot id: $__snapshot_id"
+    timestamp="$var",message="testy backup successful - new snapshot id: $__snapshot_id"
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
