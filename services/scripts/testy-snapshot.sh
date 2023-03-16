@@ -67,7 +67,7 @@ main() {
     then
         echo "Created backup volume '$_volume_id' from snapshot '$_snapshot_id'."
         if ! attach_volume "$_instance_id" "$_volume_id" "$_device_name" ||
-                mount_device "$_mount_point" _mount_device; then
+               ! mount_device "$_mount_point" _mount_device; then
             # Delete volume and exit on failure.
             if delete_volume "$_volume_id" "$_mount_point" "$_mount_device"; then
                 echo "Deleted volume '$_volume_id'."
