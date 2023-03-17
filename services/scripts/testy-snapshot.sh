@@ -60,13 +60,14 @@ main() {
 
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
+    local _mount_device
     local _volume_id
     if create_volume_from_snapshot \
       "$_snapshot_id" "$_availability_zone" "$_instance_id" "$_tags" _volume_id
     then
         echo "Created backup volume '$_volume_id' from snapshot '$_snapshot_id'."
-        if ! ( attach_volume "$_instance_id" "$_volume_id" "$_device_name" &&
-                mount_device "$_mount_point" _mount_device ); then
+        if ! attach_volume "$_instance_id" "$_volume_id" "$_device_name" ||
+               ! mount_device "$_mount_point" _mount_device; then
             # Delete volume and exit on failure.
             if delete_volume "$_volume_id" "$_mount_point" "$_mount_device"; then
                 echo "Deleted volume '$_volume_id'."
@@ -89,14 +90,12 @@ main() {
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp="$var", \
-            message="Validation succeeded for backup snapshot $_snapshot_id"
+            timestamp=$var,message="Validation succeeded for backup snapshot $_snapshot_id"
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp="$var", \
-            message="Validation failed for backup snapshot $_snapshot_id"
+            timestamp=$var,message="Validation failed for backup snapshot $_snapshot_id"
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
@@ -194,7 +193,7 @@ create_snapshot() {
             var=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp="$var",message="testy backup failed for snapshot id: $__snapshot_id"
+            timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
             return 1
         fi
 
@@ -208,7 +207,7 @@ create_snapshot() {
     var=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp="$var",message="testy backup successful - new snapshot id: $__snapshot_id"
+    timestamp=$var,message="testy backup successful - new snapshot id: $__snapshot_id"
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
@@ -384,8 +383,9 @@ mount_device()
 
     # Find the unmounted device.
     for device in ${_devices[@]}; do
-        if ! findmnt -n $device &> /dev/null; then
+        if ! findmnt -n "$device" &> /dev/null; then
              __mount_device=$device
+             break
         fi
     done
 
