@@ -447,7 +447,7 @@ validate_database() {
 
     local _validation_script=$1
     local _snapshot_id=$2
-    local _volume_id=$2
+    local _volume_id=$3
 
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
                         --tags Key=Validation,Value=incomplete
