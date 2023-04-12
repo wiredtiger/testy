@@ -17,7 +17,7 @@ run() {
 
 validate() {
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py ${database_dir}
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir"
 }
 
 "$@"
