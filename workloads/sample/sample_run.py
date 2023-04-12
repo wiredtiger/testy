@@ -53,23 +53,22 @@ update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
             Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
 update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
 
-# Read operations.
+# Insert single read.
 read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
           Operation(Operation.OP_SLEEP, "10")
 read_thread = Thread(read_op)
 
-# Delete operations.
+# Insert single delete.
 delete_op = Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1)) + \
-            Operation(Operation.OP_SLEEP, "10")
+Operation(Operation.OP_SLEEP, "10")
 delete_thread = Thread(delete_op)
 
-# Transactions.
-txn_op = txn(2*insert_op_1 + 2*update_op_1 + 2*delete_op + 2*read_op)
-txn_thread = Thread(txn_op)
+# Queries.
+txn_thread = Thread(txn(2*insert_op_1) + txn(2*update_op_1) +  txn(2*delete_op) +  txn(1*read_op))
 
-# Define the workload using the above operations.
+# Define the workload operations.
 workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
-           5*delete_thread + txn_thread)
+          5*delete_thread + txn_thread)
 
 # Disable generation of stats.
 workload.options.report_enabled = False
@@ -89,10 +88,6 @@ workload.options.drop_interval = 90
 workload.options.drop_count = 5
 workload.options.drop_trigger = 120 * 1024
 workload.options.drop_target = 80 * 1024
-
-# Enable mirror tables and random table values.
-workload.options.mirror_tables = True
-workload.options.random_table_values = True
 
 # Set the workload runtime to maximum value (~68 years).
 workload.options.run_time = 2147483647

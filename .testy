@@ -31,4 +31,3 @@ database_dir = ${application:database_dir}
 workload_dir = ${application:workload_dir}
 script_dir   = ${application:service_script_dir}
 wt_build_dir = ${wiredtiger:build_dir}
-wt_home_dir  = ${wiredtiger:home_dir}
