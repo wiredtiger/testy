@@ -90,12 +90,12 @@ main() {
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation succeeded. $__snapshot_id. $_instance_id"
+            timestamp=$var,message="Validation succeeded for backup snapshot $_snapshot_id"
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation failed. $__snapshot_id. $_instance_id"
+            timestamp=$var,message="Validation failed for backup snapshot $_snapshot_id"
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
@@ -193,7 +193,7 @@ create_snapshot() {
             var=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp=$var,message="Testy backup failed. $__snapshot_id. $_instance_id"
+            timestamp=$var,message="testy backup failed for snapshot id: $__snapshot_id"
             return 1
         fi
 
@@ -207,7 +207,8 @@ create_snapshot() {
     var=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp=$var,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
+    timestamp=$var,message="testy backup successful - new snapshot id: $__snapshot_id"
+}
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
 # an EC2 instance in the specified availability zone.
