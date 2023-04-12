@@ -208,6 +208,7 @@ create_snapshot() {
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
     timestamp=$var,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
+}
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
 # an EC2 instance in the specified availability zone.
