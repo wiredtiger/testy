@@ -179,9 +179,9 @@ create_snapshot() {
         --tags "Key=Name,Value=testy-${_ltname}-${__snapshot_id//-/}"
 
     # Wait for the snapshot to complete and be ready for use. Return an error after
-    # 10 minutes.
+    # 1 hour.
     local _snapshot_status=
-    local _wait_timeout=600
+    local _wait_timeout=3600
     local _wait_interval=10
     local _wait_time=0
 
@@ -243,9 +243,9 @@ create_volume_from_snapshot() {
     aws ec2 create-tags --resources "$__snapshot_volume_id" \
         --tags "Key=Name,Value=testy-${_ltname}-${__snapshot_volume_id//-/}"
 
-    # Check that the volume status is "ok". Wait up to 10 minutes.
+    # Check that the volume status is "ok". Wait up to 1 hour.
     local _snapshot_volume_status=
-    local _wait_timeout=600
+    local _wait_timeout=3600
     local _wait_interval=10
     local _wait_time=0
 
@@ -307,9 +307,9 @@ attach_volume() {
         return 1
     fi
 
-    # Wait for volume state to be in-use.
+    # Wait for volume state to be in-use. Wait up to 1 hour.
     local _volume_state=
-    local _wait_timeout=600
+    local _wait_timeout=3600
     local _wait_interval=10
     local _wait_time=0
 
@@ -340,9 +340,10 @@ detach_volume() {
         return 1
     fi
 
-    # Wait for the volume to finish detaching and become available for further actions.
+    # Wait for the volume to finish detaching and become available for further actions. Wait up to
+    # 1 hour.
     local _volume_state=
-    local _wait_timeout=600
+    local _wait_timeout=3600
     local _wait_interval=10
     local _wait_time=0
 
