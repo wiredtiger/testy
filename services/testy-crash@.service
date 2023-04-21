@@ -19,6 +19,6 @@ ExecStartPost=/bin/bash -c 'systemctl is-enabled testy-crash@%I.timer'
 ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
 #ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_test_status $EXIT_STATUS'
 
-TimeoutSec=3600s
+TimeoutSec=10800s
 StandardOutput=journal+console
 StandardError=journal+console
