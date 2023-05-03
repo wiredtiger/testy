@@ -474,7 +474,9 @@ delete_volume() {
     local _mount_device=$3
 
     # Unmount the device.
-    unmount_device "$_mount_point" "$_mount_device"
+    if [ -n "$_mount_device" ]; then
+        unmount_device "$_mount_point" "$_mount_device"
+    fi
 
     # Detach the volume.
     detach_volume "$_volume_id"
