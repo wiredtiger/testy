@@ -11,6 +11,6 @@ ExecStartPre=/bin/bash -c \
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup'
 #ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status $EXIT_STATUS'
 
-TimeoutSec=3600s
+TimeoutSec=36000s
 StandardOutput=journal+console
 StandardError=journal+console
