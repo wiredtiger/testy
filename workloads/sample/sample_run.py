@@ -91,7 +91,8 @@ workload.options.drop_trigger = 120 * 1024
 workload.options.drop_target = 80 * 1024
 
 # Enable mirror tables and random table values.
-workload.options.mirror_tables = True
+# FIXME: WT-11045 temporarily disable mirroring until bug is fixed. 
+workload.options.mirror_tables = False
 workload.options.random_table_values = True
 
 # Set the workload runtime to maximum value (~68 years).
