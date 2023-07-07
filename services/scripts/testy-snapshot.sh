@@ -90,12 +90,12 @@ main() {
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation succeeded. $__snapshot_id. $_instance_id"
+            timestamp=$var,message="Backup snapshot validation succeeded. $_snapshot_id. $_instance_id"
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation failed. $__snapshot_id. $_instance_id"
+            timestamp=$var,message="Backup snapshot validation failed. $_snapshot_id. $_instance_id"
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
