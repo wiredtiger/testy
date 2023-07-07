@@ -1,7 +1,7 @@
 # fabfile.py
 # Remote management commands for testy: A WiredTiger 24/7 workload testing framework.
 
-import configparser as cp, os, re, time
+import configparser as cp, os, re
 from contextlib import redirect_stdout
 from invoke.exceptions import Exit
 from invocations.console import confirm
@@ -34,7 +34,7 @@ def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
         with Connection(f"{user}@{hostname}") as conn:
             install(conn, wiredtiger_branch, testy_branch)
     except Exception as e:
-        print(f"The EC2 instance was launched sucessfully but the testy "
+        print(f"The EC2 instance was launched successfully but the testy "
               f"installation failed: {e}")
 
     # Print summary on success.
@@ -409,7 +409,7 @@ def workload(c, upload=None, describe=None):
 
 # The list function takes three optional arguments: distros, snapshots and workloads.
 #    --distros    List the available distributions for launching a testy server.
-#    --snapshots  List the snaphots created from scheduled backups, validation failure,
+#    --snapshots  List the snapshots created from scheduled backups, validation failure,
 #                 and wiredtiger failure.
 #    --workloads  List the workloads available on the specified testy server. The -H
 #                 option is required.
