@@ -12,7 +12,9 @@ populate() {
 
 run() {
     export PYTHONPATH=${wt_build_dir}/bench/workgen:${wt_build_dir}/../bench/workgen/runner:${wt_build_dir}/lang/python:$PYTHONPATH
+    ${script_dir}/testy-metrics.sh workload_status 1
     python3 ${workload_dir}/sample/sample_run.py --home ${database_dir} --keep
+    ${script_dir}/testy-metrics.sh workload_status 0
 }
 
 validate() {

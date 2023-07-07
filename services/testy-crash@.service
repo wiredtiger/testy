@@ -7,6 +7,7 @@ User=testy
 Group=testy
 Type=oneshot
 
+ExecStartPre=/bin/bash -c '${script_dir}/testy-metrics.sh crash_status 1'
 ExecStartPre=/bin/bash -c '! systemctl is-active --quiet testy-backup@%I.service'
 ExecStartPre=/bin/bash -c 'systemctl is-active --quiet testy-run@%I.service'
 
@@ -14,10 +15,11 @@ ExecStart=/bin/bash -c \
   'pkill -P $(systemctl show --property MainPID testy-run@%I.service | awk -F \'=\' \'{print $2}\') --signal SIGKILL'
 ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-crash'
 
-# Make sure the timer is enabled before restarting the testy workload.
+# Make sure the timer is enabled before restarting the testy workload so the crash service does not
+# restart testy if it has been stopped in the meantime.
 ExecStartPost=/bin/bash -c 'systemctl is-enabled testy-crash@%I.timer'
 ExecStartPost=/bin/bash -c 'sudo systemctl start testy-run@%I.service'
-#ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_test_status $EXIT_STATUS'
+ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh crash_status 0'
 
 TimeoutSec=36000s
 StandardOutput=journal+console
