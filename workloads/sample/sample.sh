@@ -19,9 +19,9 @@ run() {
 
 validate() {
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
-    # Run recovery as part of validation.
-    # The script still needs an action to perform after recovery, use 'list' to make it happy.
-    ${wt_build_dir}/wt -h "$1/$database_dir" -R list
+    echo "Running verify..."
+    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify
+    echo "Validating mirrors..."
     python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir"
 }
 
