@@ -95,6 +95,9 @@ workload.options.drop_target = 80 * 1024
 workload.options.mirror_tables = False
 workload.options.random_table_values = True
 
+# Enable background compaction.
+workload.options.background_compact = 100
+
 # Set the workload runtime to maximum value (~68 years).
 workload.options.run_time = 2147483647
 
