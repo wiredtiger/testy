@@ -31,7 +31,7 @@ from runner import *
 
 # Set up the WiredTiger connection.
 context = Context()
-config = "create=true,checkpoint=(wait=60),log=(enabled=true)"
+config = "create=true,checkpoint=(wait=60),log=(enabled=true),statistics=(fast),statistics_log=(wait=60,json)"
 connection = open_connection(context, config)
 
 # Make smaller inserts more frequently and large ones less frequently.
