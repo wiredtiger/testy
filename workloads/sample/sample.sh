@@ -2,7 +2,7 @@
 # Initial sample workload for use with the testy framework.
 
 describe() {
-    echo "A sample workload for use with the testy framework."
+    echo "A Workgen workload for use with the testy framework."
 }
 
 populate() {
