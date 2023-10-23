@@ -41,7 +41,7 @@ main() {
     # Delete any previous snapshots that have been successfully validated.
     local _snapshot_ids
     _snapshot_ids=$(aws ec2 describe-snapshots --filters "Name=tag:Application,Values=testy" \
-    "Name=tag:Validation,Values=failed" "Name=tag:InstanceID,Values=$_instance_id" \
+    "Name=tag:Validation,Values=success" "Name=tag:InstanceID,Values=$_instance_id" \
     --query "Snapshots[*].[SnapshotId]" --output text)
     for snapshot_id in $_snapshot_ids; do
         echo "Deleting snapshot '$snapshot_id' ..."
