@@ -213,10 +213,10 @@ create_snapshot() {
         if [ $_wait_time -gt $_wait_timeout ]; then
             echo "Error: Waited $_wait_timeout seconds for snapshot '$__snapshot_id'" \
                  "to complete." 
-            var=$(date +%s%3N)
+            ts=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp=$var,message="Testy backup failed. $__snapshot_id. $_instance_id"
+            timestamp=$ts,message="Testy backup failed. $__snapshot_id. $_instance_id"
             return 1
         fi
 
@@ -227,10 +227,10 @@ create_snapshot() {
             --output text)
         ((_wait_time+=_wait_interval))
     done
-    var=$(date +%s%3N)
+    ts=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp=$var,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
+    timestamp=$ts,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
