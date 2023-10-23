@@ -71,14 +71,7 @@ def launch_snapshot(c, snapshot_id):
 @task
 def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is running. Please stop {testy} to run install.")
+    exit_if_running(c)
 
     # Get Linux distribution.
     result = c.run("cat /etc/*-release", hide=True)
@@ -151,14 +144,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 @task
 def populate(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
+    exit_if_running(c)
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -516,6 +502,17 @@ def info(c):
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
+
+# Exit if Testy is running.
+def exit_if_running(c):
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+
+    # Is testy running already?
+    if current_workload:
+        testy_service = get_service_instance_name(service_name, current_workload)
+        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
+            raise Exit(f"\n{testy} is running. Please stop {testy} first.")
 
 # Return the systemd service name for the specified service template and instance.
 def get_service_instance_name(service_name, instance_name):
