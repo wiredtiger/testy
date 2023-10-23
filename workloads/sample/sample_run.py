@@ -78,7 +78,7 @@ workload.options.report_enabled = False
 workload.options.create_prefix = "table_"
 
 # Target database size in GB.
-db_size_target_gb = 50
+db_size_target_gb = 5
 
 # Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
@@ -90,8 +90,8 @@ workload.options.create_target = db_size_target_gb * 1024
 # Stop when the database size is below the target size margin.
 workload.options.drop_interval = 90
 workload.options.drop_count = 5
-workload.options.drop_trigger = (db_size_target_gb + 20) * 1024
-workload.options.drop_target = (db_size_target_gb - 20) * 1024
+workload.options.drop_trigger = (db_size_target_gb + 2) * 1024
+workload.options.drop_target = (db_size_target_gb - 2) * 1024
 
 # Enable mirror tables and random table values.
 # FIXME: WT-11045 temporarily disable mirroring until bug is fixed. 
