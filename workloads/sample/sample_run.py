@@ -77,17 +77,17 @@ workload.options.report_enabled = False
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
 
-# Targeted database size in GB.
+# Target database size in GB.
 db_size_target_gb = 50
 
-# Create one table every 30 seconds until we have reached the targeted database size.
+# Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
 workload.options.create_count = 1
 workload.options.create_trigger = db_size_target_gb * 1024
 workload.options.create_target = db_size_target_gb * 1024
 
-# Drop five tables every 90 seconds when the database size exceeds the targeted database size by too
-# much. Stop dropping tables when the database size is small enough.
+# Drop five tables every 90 seconds when the database size exceeds the target database size margin.
+# Stop when the database size is below the target size margin.
 workload.options.drop_interval = 90
 workload.options.drop_count = 5
 workload.options.drop_trigger = (db_size_target_gb + 20) * 1024
