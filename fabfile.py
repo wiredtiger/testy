@@ -424,6 +424,10 @@ def workload(c, upload=None, describe=None):
 #                 option is required.
 @task
 def list(c, distros=False, snapshots=False, workloads=False):
+    if not distros and not snapshots and not workloads:
+        print("Missing arguments, please use the --help option to read about the command.")
+        return
+
     if distros:
         launch_templates = None
         try:
