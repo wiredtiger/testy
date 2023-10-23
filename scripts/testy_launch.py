@@ -36,7 +36,7 @@ def get_launch_templates():
 # Get all the available snapshots and return the result as a list.
 def get_snapshots():
     result = local("aws ec2 describe-snapshots \
-        --filter 'Name=tag:Application,Values=testy' \
+        --filters 'Name=tag:Application,Values=testy' \
         --query 'Snapshots[*].SnapshotId' \
         --output text", hide=True, warn=True)
     if result.stderr:
@@ -63,7 +63,7 @@ def set_tag_for_resource(resource_id, key, value):
 
 def get_tag_value_from_resource(resource_id, key):
     result = local(f"aws ec2 describe-tags \
-        --filter 'Name=resource-id,Values={resource_id}' \
+        --filters 'Name=resource-id,Values={resource_id}' \
         --query 'Tags[?Key==`{key}`].Value' \
         --output text", hide=True, warn=True)
     if result.stderr:
@@ -87,7 +87,7 @@ def get_volume_id_from_instance(instance_id):
 def launch_template_exists(launch_template_name):
     result = local(f"aws ec2 describe-launch-templates \
         --launch-template-names {launch_template_name} \
-        --filter 'Name=tag:Application,Values=testy' \
+        --filters 'Name=tag:Application,Values=testy' \
         --query 'LaunchTemplates[*].LaunchTemplateName' \
         --output text", hide=True, warn=True)
     if result.stderr:
@@ -110,7 +110,7 @@ def register_image_from_snapshot(image_name, architecture, snapshot_id):
 def snapshot_exists(snapshot_id):
     result = local(f"aws ec2 describe-snapshots \
         --snapshot-ids {snapshot_id} \
-        --filter 'Name=tag:Application,Values=testy' \
+        --filters 'Name=tag:Application,Values=testy' \
         --query 'Snapshots[*].SnapshotId' \
         --output text", hide=True, warn=True)
     if result.stderr:
