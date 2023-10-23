@@ -38,6 +38,18 @@ main() {
         exit 1
     fi
 
+    # Delete any previous snapshots that have been succesffuly validated.
+    local _snapshot_ids
+    _snapshot_ids=$(aws ec2 describe-snapshots --filters "Name=tag:Application,Values=testy" \
+    "Name=tag:Validation,Values=failed" "Name=tag:InstanceID,Values=$_instance_id" \
+    --query "Snapshots[*].[SnapshotId]" --output text)
+    for snapshot_id in $_snapshot_ids; do
+        echo "Deleting snapshot '$snapshot_id' ..."
+        if ! aws ec2 delete-snapshot --snapshot-id "$snapshot_id"; then
+            echo "Error: Failed to delete snapshot '$snapshot_id'."
+        fi
+    done
+
     # Retrieve the tags from the instance.
     local _tags
     _tags=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
