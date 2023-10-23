@@ -620,6 +620,10 @@ def git_clone(c, git_url, local_dir, branch):
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
+        if not c.run("git diff-index --quiet HEAD", warn=True):
+            print("Error: There are uncommitted local changes. Please commit your changes or stash \
+them before you switch branches.")
+            return False
         if c.run(f"git fetch && git checkout {branch} && git pull", warn=True):
             return True
         return False
