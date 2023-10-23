@@ -38,14 +38,16 @@ main() {
         exit 1
     fi
 
-    # Delete any previous snapshots that have been succesffuly validated.
+    # Delete any previous snapshots that have been successfully validated.
     local _snapshot_ids
     _snapshot_ids=$(aws ec2 describe-snapshots --filters "Name=tag:Application,Values=testy" \
     "Name=tag:Validation,Values=failed" "Name=tag:InstanceID,Values=$_instance_id" \
     --query "Snapshots[*].[SnapshotId]" --output text)
     for snapshot_id in $_snapshot_ids; do
         echo "Deleting snapshot '$snapshot_id' ..."
-        if ! aws ec2 delete-snapshot --snapshot-id "$snapshot_id"; then
+        if aws ec2 delete-snapshot --snapshot-id "$snapshot_id"; then
+            echo "Deleted snapshot '$snapshot_id'."
+        else
             echo "Error: Failed to delete snapshot '$snapshot_id'."
         fi
     done
@@ -106,7 +108,10 @@ main() {
                                 --log-stream-name testy-logs --log-events \
             timestamp=$ts,message="Backup snapshot validation succeeded. $_snapshot_id. $_instance_id"
         # We can delete the snapshot now it has been validated.
-        if ! aws ec2 delete-snapshot --snapshot-id "$_snapshot_id"; then
+        echo "Deleting snapshot '$snapshot_id' ..."
+        if aws ec2 delete-snapshot --snapshot-id "$_snapshot_id"; then
+            echo "Deleted snapshot '$snapshot_id'."
+        else
             echo "Error: Failed to delete snapshot '$snapshot_id'."
         fi
     else
