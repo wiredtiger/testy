@@ -26,13 +26,20 @@
 # ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-from sample_common import *
+import os
 from runner import *
+from workgen import *
+
+# Return the total RAM in bytes.
+def get_total_os_memory():
+    return int(os.popen("free -t -b").readlines()[-1].split()[1:][0])
 
 # Set up the WiredTiger connection.
 context = Context()
-config = "create=true,checkpoint=(wait=60),log=(enabled=true),statistics=(fast),statistics_log=(wait=60,json)"
-connection = open_connection(context, config)
+# The allocated cache size follows what MongoDB does: (total memory available - 1GB) / 2.
+cache_size_gb = int(((get_total_os_memory() - 1e9) / 2) / 1e9)
+connection_config = f"cache_size={cache_size_gb}GB,checkpoint=(wait=60),create=true,log=(enabled=true),statistics=(fast),statistics_log=(wait=60,json)"
+connection = context.wiredtiger_open(connection_config)
 
 # Make smaller inserts more frequently and large ones less frequently.
 insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024)) + \
