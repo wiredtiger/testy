@@ -98,7 +98,7 @@ main() {
 
     # Validate database. Update the snapshot status on success/failure.
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
-                        --tags "Key=Validation,Value=none Key=InstanceID,Value=$_instance_id"
+                        --tags Key=Validation,Value=none Key=InstanceID,Value="$_instance_id"
 
     echo "Running validation script '$_validation_script' on volume '$_volume_id'."
     ts=$(date +%s%3N)
