@@ -7,11 +7,9 @@ main() {
 
     local _aws_endpoint
     local _instance_id
-    local _availability_zone
 
     _aws_endpoint="http://169.254.169.254/latest/meta-data/"
     _instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
-    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
 
     echo "Starting database backup for instance '$_instance_id' ..."
 
@@ -60,8 +58,12 @@ main() {
 
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
+    local _availability_zone
     local _mount_device
     local _volume_id
+
+    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
+
     if create_volume_from_snapshot \
       "$_snapshot_id" "$_availability_zone" "$_instance_id" "$_tags" _volume_id
     then
