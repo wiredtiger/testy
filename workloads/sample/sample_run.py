@@ -77,25 +77,28 @@ workload.options.report_enabled = False
 # Add a prefix to the table names.
 workload.options.create_prefix = "table_"
 
-# Create one table every 30 seconds when the database size is less than 120 GB.
+# Target database size in GB.
+db_size_target_gb = 50
+
+# Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
 workload.options.create_count = 1
-workload.options.create_trigger = 120 * 1024
-workload.options.create_target = 120 * 1024
+workload.options.create_trigger = db_size_target_gb * 1024
+workload.options.create_target = db_size_target_gb * 1024
 
-# Drop five tables every 90 seconds when the database size exceeds 120 GB. Stop
-# dropping tables when the database size goes below 80 GB.
+# Drop five tables every 90 seconds when the database size exceeds the target database size margin.
+# Stop when the database size is below the target size margin.
 workload.options.drop_interval = 90
 workload.options.drop_count = 5
-workload.options.drop_trigger = 120 * 1024
-workload.options.drop_target = 80 * 1024
+workload.options.drop_trigger = (db_size_target_gb + 20) * 1024
+workload.options.drop_target = (db_size_target_gb - 20) * 1024
 
 # Enable mirror tables and random table values.
 # FIXME: WT-11045 temporarily disable mirroring until bug is fixed. 
 workload.options.mirror_tables = False
 workload.options.random_table_values = True
 
-# Enable background compaction.
+# Enable background compaction with a compaction threshold of 100MB.
 workload.options.background_compact = 100
 
 # Set the workload runtime to maximum value (~68 years).
