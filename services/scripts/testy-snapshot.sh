@@ -106,7 +106,7 @@ main() {
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$ts,message="Backup snapshot validation succeeded. $_snapshot_id. $_instance_id"
+            timestamp=$ts,message="Backup snapshot ($_snapshot_id) validation succeeded for instance '$_instance_id'."
         # We can delete the snapshot now it has been validated.
         echo "Deleting snapshot '$_snapshot_id' ..."
         if aws ec2 delete-snapshot --snapshot-id "$_snapshot_id"; then
@@ -118,7 +118,7 @@ main() {
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$ts,message="Backup snapshot validation failed. $_snapshot_id. $_instance_id"
+            timestamp=$ts,message="Backup snapshot ($_snapshot_id) validation failed for instance '$_instance_id'."
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
@@ -216,7 +216,7 @@ create_snapshot() {
             ts=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp=$ts,message="Testy backup failed. $__snapshot_id. $_instance_id"
+            timestamp=$ts,message="Testy backup ($__snapshot_id) failed for instance '$_instance_id'."
             return 1
         fi
 
@@ -230,7 +230,7 @@ create_snapshot() {
     ts=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp=$ts,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
+    timestamp=$ts,message="Testy backup ($__snapshot_id) succeeded for instance '$_instance_id'."
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
