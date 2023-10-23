@@ -108,11 +108,11 @@ main() {
                                 --log-stream-name testy-logs --log-events \
             timestamp=$ts,message="Backup snapshot validation succeeded. $_snapshot_id. $_instance_id"
         # We can delete the snapshot now it has been validated.
-        echo "Deleting snapshot '$snapshot_id' ..."
+        echo "Deleting snapshot '$_snapshot_id' ..."
         if aws ec2 delete-snapshot --snapshot-id "$_snapshot_id"; then
-            echo "Deleted snapshot '$snapshot_id'."
+            echo "Deleted snapshot '$_snapshot_id'."
         else
-            echo "Error: Failed to delete snapshot '$snapshot_id'."
+            echo "Error: Failed to delete snapshot '$_snapshot_id'."
         fi
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
