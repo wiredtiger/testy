@@ -98,7 +98,7 @@ workload.options.drop_target = (db_size_target_gb - 20) * 1024
 workload.options.mirror_tables = False
 workload.options.random_table_values = True
 
-# Enable background compaction.
+# Enable background compaction with a compaction threshold of 100MB.
 workload.options.background_compact = 100
 
 # Set the workload runtime to maximum value (~68 years).
