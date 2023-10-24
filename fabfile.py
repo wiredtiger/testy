@@ -185,9 +185,9 @@ def start(c, workload, config_file=None):
     # If we are running test/format we need to specify which config file to use.
     if workload == "test_format":
         if not config_file:
-            print("Please specify a configuration file through 'fab ... start test_format \
+            print("Please specify a configuration file through 'fab -H <host> start test_format \
                   --config-file=<config>")
-            print("To upload a config file, use fab ... workload --format_config=<config>")
+            print("To upload a config file, use fab -H <host> workload --format_config=<config>")
             return
         set_value(c, "application", "config_file", config_file)
 

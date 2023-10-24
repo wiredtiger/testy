@@ -11,7 +11,7 @@ populate() {
 
 run() {
     ${script_dir}/testy-metrics.sh workload_status 1
-    ${wt_build_dir}/test/format/format.sh -c ${workload_dir}/test_format/${format_config} -h ${database_dir} -j 1
+    ${wt_build_dir}/test/format/format.sh -c ${workload_dir}/test_format/${config_file} -h ${database_dir} -j nproc
     ${script_dir}/testy-metrics.sh workload_status 0
 }
 

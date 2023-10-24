@@ -5,6 +5,7 @@ database_dir       = ${testy_dir}/data
 workload_dir       = ${testy_dir}/workloads
 service_script_dir = ${testy_dir}/scripts
 current_workload   =
+config_file        =
 
 [testy]
 home_dir           = ${application:testy_dir}/framework
@@ -20,7 +21,6 @@ crash_timer        = ${service_dir}/testy-crash@.timer
 backup_service     = ${service_dir}/testy-backup@.service
 backup_timer       = ${service_dir}/testy-backup@.timer
 git_url            = git@github.com:wiredtiger/testy.git
-format_config      = 
 
 [wiredtiger]
 home_dir  = ${application:testy_dir}/wiredtiger
