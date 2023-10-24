@@ -167,17 +167,9 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
-                        "change the workload.")
-    elif not workload:
-        return
+    if testy_running(c):
+        raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
+                    "change the workload.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -196,6 +188,7 @@ def start(c, workload):
     # workload and the start/stop behavior for the dependent testy-backup
     # service. The testy-backup service is started after the testy-run service
     # starts and is stopped when the testy-run service is stopped or fails.
+    service_name = Path(get_value(c, "testy", "testy_service")).name
     testy_service = get_service_instance_name(service_name, workload)
     c.sudo(f"systemctl start {testy_service}", user="root")
     if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
