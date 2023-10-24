@@ -157,9 +157,9 @@ def populate(c, workload):
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
         # Update the current workload.
         set_value(c, "application", "current_workload", workload)
-        print(f"populate succeeded for workload '{workload}'")
+        print(f"Populate succeeded for workload '{workload}'.")
     else:
-        print(f"populate failed for workload '{workload}'")
+        print(f"Populate failed for workload '{workload}'.")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
