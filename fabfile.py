@@ -738,22 +738,6 @@ def install_packages(c, release):
 
         install_bash(c)
 
-    elif release.startswith("Red Hat Enterprise Linux 8"):
-        c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
-                    "swig", "libarchive", "unzip"]
-        for package in packages:
-            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
-                    print(f" -- Package '{package}' is already the newest version.", flush=True)
-                    continue
-            if c.sudo(f"{installer} -y --best install {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by {installer}.", flush=True)
-
-        for package in ["pip", "ninja"]:
-            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by pip.", flush=True)
-
     elif release.startswith("Ubuntu 20") or release.startswith("Ubuntu 22"):
         packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig",
                     "unzip"]
