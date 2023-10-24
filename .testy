@@ -4,7 +4,7 @@ testy_dir          = /srv/testy
 database_dir       = ${testy_dir}/data
 workload_dir       = ${testy_dir}/workloads
 service_script_dir = ${testy_dir}/scripts
-current_workload   = 
+current_workload   =
 
 [testy]
 home_dir           = ${application:testy_dir}/framework
