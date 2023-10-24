@@ -168,7 +168,7 @@ def populate(c, workload):
 #   (2) testy-backup
 #   (3) testy-crash
 @task
-def start(c, workload):
+def start(c, workload, config_file=None):
 
     current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
@@ -181,6 +181,15 @@ def start(c, workload):
                         "change the workload.")
     elif not workload:
         return
+
+    # If we are running test/format we need to specify which config file to use.
+    if workload == "test_format":
+        if not config_file:
+            print("Please specify a configuration file through 'fab ... start test_format \
+                  --config-file=<config>")
+            print("To upload a config file, use fab ... workload --format_config=<config>")
+            return
+        set_value(c, "application", "config_file", config_file)
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -345,7 +354,7 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
 # The workload function takes two optional arguments: upload and describe. If no arguments are
 # provided, the current workload is returned.
 @task
-def workload(c, upload=None, describe=None):
+def workload(c, upload=None, describe=None, format_config=None):
     """ Upload and describe workloads.
     Up to two optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called):
@@ -356,12 +365,12 @@ def workload(c, upload=None, describe=None):
     """
     current_workload = get_value(c, "application", "current_workload")
     user = get_value(c, "application", "user")
+    dest = get_value(c, "application", "workload_dir")
 
     # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
     # the archive, including the archive name. After it is uploaded to the server, the archive gets
     # unpacked in the workloads directory. 
     if upload:
-        dest = get_value(c, "application", "workload_dir")
         src = f"{dest}/{upload}"
         workload_name = Path(src).stem.split('.')[0]
         exists = overwrite = False
@@ -393,7 +402,7 @@ def workload(c, upload=None, describe=None):
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
     if describe:
-        wif = get_value(c, "application", "workload_dir") + f"/{describe}/{describe}.sh"
+        wif = dest + f"/{describe}/{describe}.sh"
         command = wif + " describe"
         result = c.sudo(command, user=user, warn=True)
         if not result: 
@@ -401,8 +410,19 @@ def workload(c, upload=None, describe=None):
         elif result.stdout == "":
             print(f"No description provided for workload '{describe}'.")
     
+    if format_config:
+        src = f"{dest}/{format_config}"
+        config_filename = Path(src).stem.split('.')[0]
+        try:
+            c.put(format_config, f"{dest}/test_format/{config_filename}", preserve_mode=True)
+        except Exception as e:
+            print(e)
+            print(f"Upload failed for config file '{config_filename}'.")
+        else:
+            print(f"Upload succeeded for config file '{config_filename}'.")
+    
     # If no option has been specified, print the current workload and return as usual.  
-    if not describe and not upload:
+    if not describe and not upload and not format_config:
         if current_workload:
             print(f"The current workload is {current_workload}.")
         else: 
