@@ -71,9 +71,6 @@ def launch_snapshot(c, snapshot_id):
 @task
 def install(c, wiredtiger_branch="develop", testy_branch="main"):
 
-    if testy_running(c):
-        raise Exit(f"\n{testy} is running. Please stop {testy} to run install.")
-
     # Get Linux distribution.
     result = c.run("cat /etc/*-release", hide=True)
     d = dict(line.split('=') for line in result.stdout.split('\n') if '=' in line)
@@ -533,7 +530,6 @@ def testy_running(c):
     current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
 
-    # Is testy running already?
     if current_workload:
         testy_service = get_service_instance_name(service_name, current_workload)
         return c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True)
