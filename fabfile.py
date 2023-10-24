@@ -410,22 +410,21 @@ def workload(c, upload=None, describe=None):
 # The function will take a specified snapshot_id and delete the corresponding snapshot.
 @task
 def snapshot_delete(c, snapshot_id=None):
-    if not snapshot_id and  not instance_id:
+    if not snapshot_id:
         print("Please specify the snapshot(s) you wish to delete through \
               --snapshot_id=<snapshotid,snapshotid1> separated by a ',' .")
-    
-    if snapshot_id:
+    else:
         if "," in snapshot_id:
             snapshot_ids = snapshot_id.split(",")
             for snapshot_id in snapshot_ids:
-                result = run("aws ec2 delete-snapshot \
+                result = c.run("aws ec2 delete-snapshot \
                 --snapshot-id {snapshot_id}")
                 if result.stderr:
                     raise Exit(result.stderr)
                 print(f"Deleted snapshot '{snapshot_id}'.")        
 
         else:
-            result = run("aws ec2 delete-snapshot \
+            result = c.run("aws ec2 delete-snapshot \
             --snapshot-id {snapshot_id}")
             if result.stderr:
                     raise Exit(result.stderr)
