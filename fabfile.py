@@ -407,8 +407,8 @@ def workload(c, upload=None, describe=None):
     
     return current_workload or None
 
-# The function will take a specified snapshot ID or a list of snapshot IDs and delete the 
-# corresponding snapshots.
+# The function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with
+# no spaces, and delete the corresponding snapshots.
 @task
 def snapshot_delete(c, snapshot_id=None):
     if not snapshot_id:
