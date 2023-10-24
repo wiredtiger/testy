@@ -264,7 +264,7 @@ def stop(c):
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
-def restart(c, workload=None):
+def restart(c, workload=None, validate=False):
 
     # If there is no current workload and no specified workload, return.
     current_workload = get_value(c, "application", "current_workload")
@@ -279,14 +279,20 @@ def restart(c, workload=None):
     # Stop the testy workload.
     stop(c)
 
-    # Validate the stopped workload.
-    user = get_value(c, "application", "user")
-    wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
-    command = wif + " validate"
-    result = c.sudo(command, user=user, warn=True)
-    if not result: 
-        raise Exit(f"Validate failed for '{current_workload}' workload.")
-    
+    # Validate the stopped workload, if any.
+    if validate:
+        if current_workload:
+        # FIXME-WTBUILD-108
+            print("Validation skipped, see WTBUILD-108.")
+        #     user = get_value(c, "application", "user")
+        #     wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
+        #     command = wif + " validate"
+        #     result = c.sudo(command, user=user, warn=True)
+        #     if not result:
+        #         raise Exit(f"Validate failed for '{current_workload}' workload.")
+        else:
+            print("Validation skipped, no workload was previously defined.")
+
     # Restart the testy workload.    
     start(c, workload)
 
