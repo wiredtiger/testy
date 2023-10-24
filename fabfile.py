@@ -418,14 +418,14 @@ def snapshot_delete(c, snapshot_id=None):
         if "," in snapshot_id:
             snapshot_ids = snapshot_id.split(",")
             for snapshot_id in snapshot_ids:
-                result = local("aws ec2 delete-snapshot \
+                result = run("aws ec2 delete-snapshot \
                 --snapshot-id {snapshot_id}")
                 if result.stderr:
                     raise Exit(result.stderr)
                 print(f"Deleted snapshot '{snapshot_id}'.")        
 
         else:
-            result = local("aws ec2 delete-snapshot \
+            result = run("aws ec2 delete-snapshot \
             --snapshot-id {snapshot_id}")
             if result.stderr:
                     raise Exit(result.stderr)
