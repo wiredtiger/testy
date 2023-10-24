@@ -351,10 +351,10 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
 
-# The workload function takes two optional arguments: upload and describe. If no arguments are
-# provided, the current workload is returned.
+# The workload function takes three optional arguments: upload, upload_config and describe. 
+# If no arguments are provided, the current workload is returned.
 @task
-def workload(c, upload=None, describe=None, format_config=None):
+def workload(c, upload=None, describe=None, upload_config=None):
     """ Upload and describe workloads.
     Up to two optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called):
@@ -367,12 +367,14 @@ def workload(c, upload=None, describe=None, format_config=None):
     user = get_value(c, "application", "user")
     dest = get_value(c, "application", "workload_dir")
 
-    # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
-    # the archive, including the archive name. After it is uploaded to the server, the archive gets
-    # unpacked in the workloads directory. 
+    # Uploads a workload from a local directory to the testy server. Upload takes the absolute or
+    # relative  of the archive. After it is uploaded to the server, the archive gets unpacked in 
+    # the workloads directory. The workload should be in a directory named after the workload, with 
+    # a shell script of the same workload name. 
     if upload:
-        src = f"{dest}/{upload}"
-        workload_name = Path(src).stem.split('.')[0]
+        workload_name = Path(upload).stem.split('.')[0]
+        archived_name = os.path.basename(upload)
+        src = f"{dest}/{archived_name}"
         exists = overwrite = False
 
         if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True):
@@ -385,19 +387,19 @@ def workload(c, upload=None, describe=None, format_config=None):
         if exists == overwrite:
             script = get_value(c, "testy", "unpack_script")
             try: 
-                c.put(upload, "/tmp", preserve_mode=True)
+                c.put(upload, "/tmp/", preserve_mode=True)
             except Exception as e:
                 print(e)
                 print(f"Upload failed for workload '{workload_name}'.")
             else:
-                copy = c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
+                copy = c.sudo(f"cp /tmp/{archived_name} {src}", user=user, warn=True)
                 unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
                     warn=True)
                 if copy and unpack: 
                     print(f"Upload succeeded! Workload '{workload_name}' ready for use.")
                 else:
                     print(f"Failed to add '{workload_name}'.")
-                c.sudo(f"rm -f {src} /tmp/{upload}")
+                # c.sudo(f"rm -f {src} /tmp/{archived_name}")
 
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
@@ -410,19 +412,26 @@ def workload(c, upload=None, describe=None, format_config=None):
         elif result.stdout == "":
             print(f"No description provided for workload '{describe}'.")
     
-    if format_config:
-        src = f"{dest}/{format_config}"
-        config_filename = Path(src).stem.split('.')[0]
+    # Upload a test format config file to the test_format workloads directory ready for use, this 
+    # function takes both relative or absolute paths to your local config file. 
+    if upload_config:
+        config_filename = os.path.basename(upload_config)
+        src = f"{dest}/test_format/{config_filename}"
+
         try:
-            c.put(format_config, f"{dest}/test_format/{config_filename}", preserve_mode=True)
+            c.put(upload_config, f"/tmp/", preserve_mode=True)
         except Exception as e:
             print(e)
             print(f"Upload failed for config file '{config_filename}'.")
         else:
-            print(f"Upload succeeded for config file '{config_filename}'.")
+            copy = c.sudo(f"cp -f /tmp/{config_filename} {src}", user=user, warn=True)
+            if copy:
+                print(f"Upload succeeded for config file '{config_filename}'.")
+            c.sudo(f"rm -f /tmp/{config_filename}")
+
     
     # If no option has been specified, print the current workload and return as usual.  
-    if not describe and not upload and not format_config:
+    if not describe and not upload and not upload_config:
         if current_workload:
             print(f"The current workload is {current_workload}.")
         else: 
