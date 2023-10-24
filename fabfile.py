@@ -407,28 +407,22 @@ def workload(c, upload=None, describe=None):
     
     return current_workload or None
 
-# The function will take a specified snapshot_id and delete the corresponding snapshot.
+# The function will take a specified snapshot ID or a list of snapshot IDs and delete the 
+# corresponding snapshots.
 @task
 def snapshot_delete(c, snapshot_id=None):
     if not snapshot_id:
         print("Please specify the snapshot(s) you wish to delete through \
               --snapshot_id=<snapshotid,snapshotid1> separated by a ',' .")
-    else:
-        if "," in snapshot_id:
-            snapshot_ids = snapshot_id.split(",")
-            for snapshot_id in snapshot_ids:
-                result = c.run("aws ec2 delete-snapshot \
-                --snapshot-id {snapshot_id}")
-                if result.stderr:
-                    raise Exit(result.stderr)
-                print(f"Deleted snapshot '{snapshot_id}'.")        
-
-        else:
-            result = c.run("aws ec2 delete-snapshot \
-            --snapshot-id {snapshot_id}")
-            if result.stderr:
-                    raise Exit(result.stderr)
-            print(f"Deleted snapshot '{snapshot_id}'.")        
+        return
+    
+    snapshot_ids = snapshot_id.split(",")
+    for snapshot_id in snapshot_ids:
+        result = c.run(f"aws ec2 delete-snapshot \
+        --snapshot-id {snapshot_id}")
+        if result.stderr:
+            raise Exit(result.stderr)
+        print(f"Deleted snapshot '{snapshot_id}'.")       
 
 # The list function takes three optional arguments: distros, snapshots and workloads.
 #    --distros    List the available distributions for launching a testy server.
