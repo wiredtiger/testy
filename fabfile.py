@@ -402,6 +402,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
                 print(e)
                 print(f"Upload failed for workload '{workload_name}'.")
             else:
+                c.sudo(f"rm -rf {dest}/{workload_name}")
                 copy = c.sudo(f"cp /tmp/{archived_name} {src}", user=user, warn=True)
                 unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
                     warn=True)
