@@ -399,7 +399,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
                     print(f"Upload succeeded! Workload '{workload_name}' ready for use.")
                 else:
                     print(f"Failed to add '{workload_name}'.")
-                # c.sudo(f"rm -f {src} /tmp/{archived_name}")
+                c.sudo(f"rm -f {src} /tmp/{archived_name}")
 
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
