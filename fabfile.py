@@ -365,10 +365,11 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
 @task
 def workload(c, upload=None, describe=None, upload_config=None):
     """ Upload and describe workloads.
-    Up to two optional arguments can be taken at a time. If more than one option is specified at
+    Up to three optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called):
        1. upload
        2. describe
+       3. upload_config
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
     """
@@ -413,7 +414,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
     if describe:
-        wif = dest + f"/{describe}/{describe}.sh"
+        wif = f"{dest}/{describe}/{describe}.sh"
         command = wif + " describe"
         result = c.sudo(command, user=user, warn=True)
         if not result: 
@@ -433,8 +434,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
             print(e)
             print(f"Upload failed for config file '{config_filename}'.")
         else:
-            copy = c.sudo(f"cp -f /tmp/{config_filename} {src}", user=user, warn=True)
-            if copy:
+            if c.sudo(f"cp -f /tmp/{config_filename} {src}", user=user, warn=True):
                 print(f"Upload succeeded for config file '{config_filename}'.")
             c.sudo(f"rm -f /tmp/{config_filename}")
 
@@ -446,7 +446,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
         else: 
             print("The current workload is unspecified.")
     
-    return current_workload or None
+    return current_workload
 
 # The function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with
 # no spaces, and delete the corresponding snapshots.

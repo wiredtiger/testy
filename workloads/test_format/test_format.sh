@@ -11,14 +11,14 @@ populate() {
 
 run() {
     ${script_dir}/testy-metrics.sh workload_status 1
-    ${wt_build_dir}/test/format/format.sh -c ${workload_dir}/test_format/${config_file} -h ${database_dir} -j nproc
+    ${wt_build_dir}/test/format/format.sh -c ${workload_dir}/test_format/${config_file} -h ${database_dir} -j $(nproc)
     ${script_dir}/testy-metrics.sh workload_status 0
 }
 
 validate() {
     echo "Running verify..."
     # Run verify in all the folders created by test/format.
-    cd $wt_build_dir/test/format || exit
+    cd ${wt_build_dir}/test/format || exit
     for f in $(ls -d $1/$database_dir/*/);
     do
         ../../wt -h "$f" -R verify;
