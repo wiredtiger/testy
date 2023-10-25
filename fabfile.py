@@ -20,9 +20,9 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 # Launch an AWS instance and install testy using the given WiredTiger and testy branches.
 @task
-def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
+def launch(c, distro, iam=False, wiredtiger_branch="develop", testy_branch="main"):
 
-    result = launch_from_distro(distro)
+    result = launch_from_distro(distro, iam)
     if result['status'] != 0:
         print(f"Launch failed. {result['msg']}")
         return

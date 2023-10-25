@@ -168,7 +168,7 @@ def wait_on_status_check(instance_id):
 # contains a user-friendly error message.
 
 # Launch an AWS instance given a distro.
-def launch_from_distro(distro):
+def launch_from_distro(distro, iam):
 
     if not launch_template_exists(distro):
         return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
@@ -190,6 +190,16 @@ def launch_from_distro(distro):
         print("Success!", flush=True)
         instance_id = result.stdout.strip()
         wait_on_status_check(instance_id)
+
+        # Attach IAM role if requested.
+        if iam:
+            result = local(f"aws ec2 associate-iam-instance-profile \
+                --instance-id {instance_id} \
+                --iam-instance-profile Name=testy_iam", hide=True, warn=True)
+            if result.stderr:
+                print("Failed at attaching IAM role.", flush=True)
+            else:
+                print("IAM role attached!", flush=True)
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
