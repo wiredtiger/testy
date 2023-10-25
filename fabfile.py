@@ -180,16 +180,18 @@ def start(c, workload, config_file=None):
             raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                         "change the workload.")
     elif not workload:
-        return
+        raise Exit(f"Please specify a workload to run with 'fab -H <host> start <workload>.")
 
     # If we are running test/format we need to specify which config file to use.
     if workload == "test_format":
         if not config_file:
             print("Please specify a configuration file through 'fab -H <host> start test_format \
                   --config-file=<config>")
-            print("To upload a config file, use fab -H <host> workload --format_config=<config>")
+            print("To upload a config file, use fab -H <host> workload --format-config=<config>")
             return
         set_value(c, "application", "config_file", config_file)
+    else:
+        assert config_file == None
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -202,6 +204,10 @@ def start(c, workload, config_file=None):
             Path(get_value(c, "testy", timer)).name, workload)
         if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
             print(f"Failed to schedule ${timer_name} service timer.")
+
+    # Update the environment variables for the shell scripts from .testy to systemd services 
+    conf = get_systemd_service_conf(c, "environment")
+    c.sudo(f"echo '{conf}' | sudo tee /etc/systemd/system/{service_name}.d/env.conf >/dev/null")
     c.sudo("systemctl daemon-reload")
 
     # Start the testy-run service which manages the long-running
