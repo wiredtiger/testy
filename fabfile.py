@@ -8,7 +8,7 @@ from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
 from scripts.testy_launch import get_launch_templates, get_snapshots, launch_from_distro, \
-    launch_from_snapshot
+    launch_from_snapshot, terminate_instance
 
 testy = "\033[1;36mtesty\033[0m"
 testy_config = ".testy"
@@ -66,6 +66,14 @@ def launch_snapshot(c, snapshot_id):
     print(f"The host is '{hostname}'")
     print(f"The instance id is '{result['instance_id']}'")
     print(f"The instance name is '{result['instance_name']}'\n")
+
+# Terminate an AWS instance.
+@task
+def terminate(c, instance_id):
+    try:
+        terminate_instance(instance_id)
+    except Exception as e:
+        print(f"Error: {str(e)}")
 
 # Install the testy framework.
 @task

@@ -265,6 +265,20 @@ def launch_from_snapshot(snapshot_id):
     return {"status": 0, "user": user, "hostname": hostname,
         "instance_id": instance_id, "instance_name": instance_name}
 
+# Terminate an AWS instance given its ID.
+def terminate_instance(instance_id):
+    result = local(f"aws ec2 terminate-instances \
+        --instance-ids {instance_id} \
+        --query 'TerminatingInstances[*].CurrentState.Name' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    status = result.stdout.strip()
+    if status == 'shutting-down':
+        print(f"The instance '{instance_id}' is shutting down.")
+    elif status == 'terminated':
+        print(f"The instance '{instance_id}' is already terminated.")
+
 if __name__ == "__main__":
 
     globals()[sys.argv[1]](*sys.argv[2:])
