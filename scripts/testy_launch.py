@@ -208,7 +208,7 @@ def attach_iam_profile(instance_id, iam_profile):
 # contains a user-friendly error message.
 
 # Launch an AWS instance given a distro.
-def launch_from_distro(distro, iam_profile):
+def launch_from_distro(distro, instance_name, iam_profile):
 
     if not launch_template_exists(distro):
         return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
@@ -237,7 +237,8 @@ def launch_from_distro(distro, iam_profile):
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
-        instance_name = f"testy-{distro}-{instance_id.replace('-','')}"
+        if not instance_name:
+            instance_name = f"testy-{distro}-{instance_id.replace('-','')}"
         set_tag_for_resource(instance_id, "Name", instance_name)
         set_tag_for_resource(volume_id, "Name", f"testy-{distro}-{volume_id.replace('-','')}")
 

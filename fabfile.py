@@ -20,13 +20,13 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 # Launch an AWS instance and install testy using the given WiredTiger and testy branches.
 @task
-def launch(c, distro, iam_profile=None, wiredtiger_branch="develop", testy_branch="main"):
+def launch(c, distro, instance_name=None, iam_profile=None, wiredtiger_branch="develop", testy_branch="main"):
 
     # Check for invalid IAM profiles.
     if iam_profile is not None and not iam_profile:
         raise Exit(f"The IAM profile '{iam_profile}' is invalid.")
 
-    result = launch_from_distro(distro, iam_profile)
+    result = launch_from_distro(distro, instance_name, iam_profile)
     if result['status'] != 0:
         print(f"Launch failed. {result['msg']}")
         return
