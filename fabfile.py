@@ -172,9 +172,10 @@ def populate(c, workload):
 #   (3) testy-crash
 @task
 def start(c, workload, config_file=None):
-
+    
     current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
+    skip_services = False
 
     # Is testy running already?
     if current_workload:
@@ -193,6 +194,7 @@ def start(c, workload, config_file=None):
             print("To upload a config file, use fab -H <host> workload --format-config=<config>")
             return
         set_value(c, "application", "config_file", config_file)
+        skip_services = True
     else:
         assert config_file == None
 
@@ -202,11 +204,12 @@ def start(c, workload, config_file=None):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # Enable service timers.
-    for timer in ["backup_timer", "crash_timer"]:
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", timer)).name, workload)
-        if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
-            print(f"Failed to schedule ${timer_name} service timer.")
+    if not skip_services:
+        for timer in ["backup_timer", "crash_timer"]:
+            timer_name = get_service_instance_name(
+                Path(get_value(c, "testy", timer)).name, workload)
+            if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
+                print(f"Failed to schedule ${timer_name} service timer.")
 
     # Update the environment variables for the shell scripts from .testy to systemd services 
     conf = get_systemd_service_conf(c, "environment")
@@ -231,31 +234,36 @@ def start(c, workload, config_file=None):
 @task
 def stop(c):
 
+    skip_services = False
     workload = get_value(c, "application", "current_workload")
     if not workload:
         print(f"\nNothing to stop. No workload is defined.")
         return
 
-    # Stop service timers.
-    for timer in ["backup_timer", "crash_timer"]:
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", timer)).name, workload)
-        c.sudo(f"systemctl stop {timer_name}", user="root")
+    if workload == "test_format":
+        skip_services == True
+    
+    if not skip_services:
+        # Stop service timers.
+        for timer in ["backup_timer", "crash_timer"]:
+            timer_name = get_service_instance_name(
+                Path(get_value(c, "testy", timer)).name, workload)
+            c.sudo(f"systemctl stop {timer_name}", user="root")
 
-    # Check if services are still in progress.
-    service_name = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_service")).name, workload)
-    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-        print("A backup is currently in progress. The service will terminate when the " \
-              "backup completes.")
-    service_name = get_service_instance_name(
-        Path(get_value(c, "testy", "crash_service")).name, workload)
-    result = c.run(
-        f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
-        hide=True)
-    if result.stdout.strip() != "0":
-        print("A crash test is currently in progress. The service will terminate when " \
-              "the crash test completes.")
+        # Check if services are still in progress.
+        service_name = get_service_instance_name(
+            Path(get_value(c, "testy", "backup_service")).name, workload)
+        if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+            print("A backup is currently in progress. The service will terminate when the " \
+                "backup completes.")
+        service_name = get_service_instance_name(
+            Path(get_value(c, "testy", "crash_service")).name, workload)
+        result = c.run(
+            f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
+            hide=True)
+        if result.stdout.strip() != "0":
+            print("A crash test is currently in progress. The service will terminate when " \
+                "the crash test completes.")
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -270,15 +278,16 @@ def stop(c):
     else:
         print(f"{testy} is not running.")
 
-    # Disable service timers for the current workload.
-    timer_name = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_timer")).name, workload)
-    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-        print(f"Backup scheduling is disabled.")
-    timer_name = get_service_instance_name(
-        Path(get_value(c, "testy", "crash_timer")).name, workload)
-    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-        print(f"Crash test scheduling is disabled.")
+    if not skip_services:
+        # Disable service timers for the current workload.
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", "backup_timer")).name, workload)
+        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+            print(f"Backup scheduling is disabled.")
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", "crash_timer")).name, workload)
+        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+            print(f"Crash test scheduling is disabled.")
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
