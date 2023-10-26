@@ -85,7 +85,7 @@ workload.options.report_enabled = False
 workload.options.create_prefix = "table_"
 
 # Target database size in GB.
-db_size_target_gb = 50
+db_size_target_gb = 25
 
 # Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
