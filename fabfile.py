@@ -20,9 +20,13 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 # Launch an AWS instance and install testy using the given WiredTiger and testy branches.
 @task
-def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
+def launch(c, distro, iam_profile=None, wiredtiger_branch="develop", testy_branch="main"):
 
-    result = launch_from_distro(distro)
+    # Check for invalid IAM profiles.
+    if iam_profile is not None and not iam_profile:
+        raise Exit(f"The IAM profile '{iam_profile}' is invalid.")
+
+    result = launch_from_distro(distro, iam_profile)
     if result['status'] != 0:
         print(f"Launch failed. {result['msg']}")
         return
@@ -150,14 +154,8 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 @task
 def populate(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
+    if testy_running(c):
+        raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -181,17 +179,9 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
-                        "change the workload.")
-    elif not workload:
-        return
+    if testy_running(c):
+        raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
+                    "change the workload.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -210,6 +200,7 @@ def start(c, workload):
     # workload and the start/stop behavior for the dependent testy-backup
     # service. The testy-backup service is started after the testy-run service
     # starts and is stopped when the testy-run service is stopped or fails.
+    service_name = Path(get_value(c, "testy", "testy_service")).name
     testy_service = get_service_instance_name(service_name, workload)
     c.sudo(f"systemctl start {testy_service}", user="root")
     if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
@@ -446,6 +437,10 @@ def snapshot_delete(c, snapshot_id=None):
 #                 option is required.
 @task
 def list(c, distros=False, snapshots=False, workloads=False):
+    if not distros and not snapshots and not workloads:
+        print("Missing arguments, please use the --help option to read about the command.")
+        return
+
     if distros:
         launch_templates = None
         try:
@@ -534,6 +529,16 @@ def info(c):
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
+
+# Checks if Testy is running.
+def testy_running(c):
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+
+    if current_workload:
+        testy_service = get_service_instance_name(service_name, current_workload)
+        return c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True)
+    return False
 
 # Return the systemd service name for the specified service template and instance.
 def get_service_instance_name(service_name, instance_name):
@@ -638,6 +643,10 @@ def git_clone(c, git_url, local_dir, branch):
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
+        if not c.run("git diff-index --quiet HEAD", warn=True):
+            print("Error: There are uncommitted local changes. Please commit your changes or stash \
+them before you switch branches.")
+            return False
         if c.run(f"git fetch && git checkout {branch} && git pull", warn=True):
             return True
         return False

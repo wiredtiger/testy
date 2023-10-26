@@ -158,6 +158,24 @@ def wait_on_status_check(instance_id):
         raise Exit(f"The status check failed to complete successfully after "
             f"{max_retries*sleep_time} seconds. Please check the AWS console.")
 
+def attach_iam_profile(instance_id, iam_profile):
+    result = local(f"aws iam get-role \
+        --role-name {iam_profile} \
+        --output text", hide=True, warn=True)
+
+    if result.stderr:
+        print(f"The IAM profile '{iam_profile}' does not exist.", flush=True)
+        return
+
+    result = local(f"aws ec2 associate-iam-instance-profile \
+        --instance-id {instance_id} \
+        --iam-instance-profile Name={iam_profile}", hide=True, warn=True)
+
+    if result.stderr:
+        print(f"Failed at attaching the IAM profile '{iam_profile}'.", flush=True)
+
+    print(f"The IAM profile '{iam_profile}' has been successfully attached!", flush=True)
+
 # The following two functions are called from the fabfile and implement launching an
 # instance in AWS EC2 from either a launch template (analogous to an Evergreen "distro")
 # or from a snapshot ID. The functions return a python dictionary that contains information
@@ -168,7 +186,7 @@ def wait_on_status_check(instance_id):
 # contains a user-friendly error message.
 
 # Launch an AWS instance given a distro.
-def launch_from_distro(distro):
+def launch_from_distro(distro, iam_profile):
 
     if not launch_template_exists(distro):
         return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
@@ -190,6 +208,10 @@ def launch_from_distro(distro):
         print("Success!", flush=True)
         instance_id = result.stdout.strip()
         wait_on_status_check(instance_id)
+
+        # Attach IAM profile if requested.
+        if iam_profile:
+            attach_iam_profile(instance_id, iam_profile)
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
