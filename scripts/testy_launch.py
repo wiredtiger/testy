@@ -161,10 +161,11 @@ def wait_on_status_check(instance_id):
 def attach_iam_profile(instance_id, iam_profile):
     result = local(f"aws iam get-role \
         --role-name {iam_profile} \
-        --output-text", hide=True, warn=True)
+        --output text", hide=True, warn=True)
 
     if result.stderr:
         print(f"The IAM profile '{iam_profile}' does not exist.", flush=True)
+        return
 
     result = local(f"aws ec2 associate-iam-instance-profile \
         --instance-id {instance_id} \
