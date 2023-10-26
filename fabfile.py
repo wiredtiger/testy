@@ -245,26 +245,8 @@ def stop(c):
         skip_services = True
     
     if not skip_services:
-        # Stop service timers.
-        for timer in ["backup_timer", "crash_timer"]:
-            timer_name = get_service_instance_name(
-                Path(get_value(c, "testy", timer)).name, workload)
-            c.sudo(f"systemctl stop {timer_name}", user="root")
-
-        # Check if services are still in progress.
-        service_name = get_service_instance_name(
-            Path(get_value(c, "testy", "backup_service")).name, workload)
-        if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-            print("A backup is currently in progress. The service will terminate when the " \
-                "backup completes.")
-        service_name = get_service_instance_name(
-            Path(get_value(c, "testy", "crash_service")).name, workload)
-        result = c.run(
-            f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
-            hide=True)
-        if result.stdout.strip() != "0":
-            print("A crash test is currently in progress. The service will terminate when " \
-                "the crash test completes.")
+        # Stop service timers for the workloads that have it running.
+        stop_service_timer(c, workload)
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -280,15 +262,8 @@ def stop(c):
         print(f"{testy} is not running.")
 
     if not skip_services:
-        # Disable service timers for the current workload.
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", "backup_timer")).name, workload)
-        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-            print(f"Backup scheduling is disabled.")
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", "crash_timer")).name, workload)
-        if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-            print(f"Crash test scheduling is disabled.")
+        # Disable the crash and backup services.
+        disable_crash_backup_services(c, workload)
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -625,6 +600,41 @@ def parser_operation(c, func, section, key=None, value=None):
         return result.stdout
     else:
         raise Exit(f"Error: {result.stderr}")
+    
+# Stop the service timer
+def stop_service_timer(c, workload):
+    # Stop service timers.
+    for timer in ["backup_timer", "crash_timer"]:
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", timer)).name, workload)
+        c.sudo(f"systemctl stop {timer_name}", user="root")
+
+    # Check if services are still in progress.
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_service")).name, workload)
+    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+        print("A backup is currently in progress. The service will terminate when the " \
+            "backup completes.")
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_service")).name, workload)
+    result = c.run(
+        f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
+        hide=True)
+    if result.stdout.strip() != "0":
+        print("A crash test is currently in progress. The service will terminate when " \
+            "the crash test completes.")
+
+# Disable the crash and backup services for the current workload.
+def disable_crash_backup_services(c, workload):
+    # Disable service timers for the current workload.
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Backup scheduling is disabled.")
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Crash test scheduling is disabled.")
 
 # Create framework superuser account.
 def create_user(c, username):
