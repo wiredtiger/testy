@@ -20,9 +20,13 @@ wiredtiger = "\033[1;33mwiredtiger\033[0m"
 
 # Launch an AWS instance and install testy using the given WiredTiger and testy branches.
 @task
-def launch(c, distro, wiredtiger_branch="develop", testy_branch="main"):
+def launch(c, distro, iam_profile=None, wiredtiger_branch="develop", testy_branch="main"):
 
-    result = launch_from_distro(distro)
+    # Check for invalid IAM profiles.
+    if iam_profile is not None and not iam_profile:
+        raise Exit(f"The IAM profile '{iam_profile}' is invalid.")
+
+    result = launch_from_distro(distro, iam_profile)
     if result['status'] != 0:
         print(f"Launch failed. {result['msg']}")
         return
@@ -142,14 +146,8 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
 @task
 def populate(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
+    if testy_running(c):
+        raise Exit(f"\n{testy} is running. Please stop {testy} to run populate.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -162,9 +160,9 @@ def populate(c, workload):
     if c.sudo(command, user=get_value(c, "application", "user"), warn=True):
         # Update the current workload.
         set_value(c, "application", "current_workload", workload)
-        print(f"populate succeeded for workload '{workload}'")
+        print(f"Populate succeeded for workload '{workload}'.")
     else:
-        print(f"populate failed for workload '{workload}'")
+        print(f"Populate failed for workload '{workload}'.")
 
 # Start the framework using the specified workload. This function starts three services:
 #   (1) testy-run executes the run function as defined in the workload interface file
@@ -173,17 +171,9 @@ def populate(c, workload):
 @task
 def start(c, workload):
 
-    current_workload = get_value(c, "application", "current_workload")
-    service_name = Path(get_value(c, "testy", "testy_service")).name
-
-    # Is testy running already?
-    if current_workload:
-        testy_service = get_service_instance_name(service_name, current_workload)
-        if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
-            raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
-                        "change the workload.")
-    elif not workload:
-        return
+    if testy_running(c):
+        raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
+                    "change the workload.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -202,6 +192,7 @@ def start(c, workload):
     # workload and the start/stop behavior for the dependent testy-backup
     # service. The testy-backup service is started after the testy-run service
     # starts and is stopped when the testy-run service is stopped or fails.
+    service_name = Path(get_value(c, "testy", "testy_service")).name
     testy_service = get_service_instance_name(service_name, workload)
     c.sudo(f"systemctl start {testy_service}", user="root")
     if c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True):
@@ -267,7 +258,7 @@ def stop(c):
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
-def restart(c, workload=None):
+def restart(c, workload=None, validate=False):
 
     # If there is no current workload and no specified workload, return.
     current_workload = get_value(c, "application", "current_workload")
@@ -282,14 +273,20 @@ def restart(c, workload=None):
     # Stop the testy workload.
     stop(c)
 
-    # Validate the stopped workload.
-    user = get_value(c, "application", "user")
-    wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
-    command = wif + " validate"
-    result = c.sudo(command, user=user, warn=True)
-    if not result: 
-        raise Exit(f"Validate failed for '{current_workload}' workload.")
-    
+    # Validate the stopped workload, if any.
+    if validate:
+        if current_workload:
+        # FIXME-WTBUILD-108
+            print("Validation skipped, see WTBUILD-108.")
+        #     user = get_value(c, "application", "user")
+        #     wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
+        #     command = wif + " validate"
+        #     result = c.sudo(command, user=user, warn=True)
+        #     if not result:
+        #         raise Exit(f"Validate failed for '{current_workload}' workload.")
+        else:
+            print("Validation skipped, no workload was previously defined.")
+
     # Restart the testy workload.    
     start(c, workload)
 
@@ -407,6 +404,23 @@ def workload(c, upload=None, describe=None):
     
     return current_workload or None
 
+# The function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with
+# no spaces, and delete the corresponding snapshots.
+@task
+def snapshot_delete(c, snapshot_id=None):
+    if not snapshot_id:
+        print("Please specify the snapshot(s) you wish to delete through \
+              --snapshot_id=<snapshotid,snapshotid1> separated by a ',' .")
+        return
+    
+    snapshot_ids = snapshot_id.split(",")
+    for snapshot_id in snapshot_ids:
+        result = c.run(f"aws ec2 delete-snapshot \
+        --snapshot-id {snapshot_id}")
+        if result.stderr:
+            raise Exit(result.stderr)
+        print(f"Deleted snapshot '{snapshot_id}'.")       
+
 # The list function takes three optional arguments: distros, snapshots and workloads.
 #    --distros    List the available distributions for launching a testy server.
 #    --snapshots  List the snapshots created from scheduled backups, validation failure,
@@ -415,6 +429,10 @@ def workload(c, upload=None, describe=None):
 #                 option is required.
 @task
 def list(c, distros=False, snapshots=False, workloads=False):
+    if not distros and not snapshots and not workloads:
+        print("Missing arguments, please use the --help option to read about the command.")
+        return
+
     if distros:
         launch_templates = None
         try:
@@ -503,6 +521,16 @@ def info(c):
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
+
+# Checks if Testy is running.
+def testy_running(c):
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+
+    if current_workload:
+        testy_service = get_service_instance_name(service_name, current_workload)
+        return c.sudo(f"systemctl is-active {testy_service}", hide=True, warn=True)
+    return False
 
 # Return the systemd service name for the specified service template and instance.
 def get_service_instance_name(service_name, instance_name):
@@ -607,6 +635,10 @@ def git_clone(c, git_url, local_dir, branch):
 def git_checkout(c, dir, branch):
     with c.cd(dir):
         print(f"Checking out branch '{branch}' ...")
+        if not c.run("git diff-index --quiet HEAD", warn=True):
+            print("Error: There are uncommitted local changes. Please commit your changes or stash \
+them before you switch branches.")
+            return False
         if c.run(f"git fetch && git checkout {branch} && git pull", warn=True):
             return True
         return False
@@ -698,22 +730,6 @@ def install_packages(c, release):
                 print(f" -- Package '{package}' installed by pip.", flush=True)
 
         install_bash(c)
-
-    elif release.startswith("Red Hat Enterprise Linux 8"):
-        c.sudo(f"{installer} -y update", warn=True, hide=True)
-        packages = ["cmake", "gcc", "gcc-c++", "git", "python3", "python3-devel",
-                    "swig", "libarchive", "unzip"]
-        for package in packages:
-            if c.run(f"{installer} list installed {package}", warn=True, hide=True):
-                if c.sudo(f"{installer} check-upgrade {package}", warn=True, hide=True):
-                    print(f" -- Package '{package}' is already the newest version.", flush=True)
-                    continue
-            if c.sudo(f"{installer} -y --best install {package}", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by {installer}.", flush=True)
-
-        for package in ["pip", "ninja"]:
-            if c.sudo(f"python3 -m pip install {package} --upgrade", warn=True, hide=True):
-                print(f" -- Package '{package}' installed by pip.", flush=True)
 
     elif release.startswith("Ubuntu 20") or release.startswith("Ubuntu 22"):
         packages = ["cmake", "ccache", "gcc", "g++", "git", "ninja-build", "python3-dev", "swig",

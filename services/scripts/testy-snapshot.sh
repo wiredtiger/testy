@@ -7,11 +7,9 @@ main() {
 
     local _aws_endpoint
     local _instance_id
-    local _availability_zone
 
     _aws_endpoint="http://169.254.169.254/latest/meta-data/"
     _instance_id=$(curl ${_aws_endpoint}/instance-id 2> /dev/null)
-    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
 
     echo "Starting database backup for instance '$_instance_id' ..."
 
@@ -40,6 +38,20 @@ main() {
         exit 1
     fi
 
+    # Delete any previous snapshots that have been successfully validated.
+    local _snapshot_ids
+    _snapshot_ids=$(aws ec2 describe-snapshots --filters "Name=tag:Application,Values=testy" \
+    "Name=tag:Validation,Values=success" "Name=tag:InstanceID,Values=$_instance_id" \
+    --query "Snapshots[*].[SnapshotId]" --output text)
+    for snapshot_id in $_snapshot_ids; do
+        echo "Deleting snapshot '$snapshot_id' ..."
+        if aws ec2 delete-snapshot --snapshot-id "$snapshot_id"; then
+            echo "Deleted snapshot '$snapshot_id'."
+        else
+            echo "Error: Failed to delete snapshot '$snapshot_id'."
+        fi
+    done
+
     # Retrieve the tags from the instance.
     local _tags
     _tags=$(aws ec2 describe-instances --instance-ids "$_instance_id" \
@@ -60,8 +72,12 @@ main() {
 
     # Create a volume from the snapshot and if successful, attach it to the instance
     # and mount the device at the specificed mount point.
+    local _availability_zone
     local _mount_device
     local _volume_id
+
+    _availability_zone=$(curl ${_aws_endpoint}/placement/availability-zone 2> /dev/null)
+
     if create_volume_from_snapshot \
       "$_snapshot_id" "$_availability_zone" "$_instance_id" "$_tags" _volume_id
     then
@@ -82,20 +98,27 @@ main() {
 
     # Validate database. Update the snapshot status on success/failure.
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
-                        --tags Key=Validation,Value=none
+                        --tags Key=Validation,Value=none Key=InstanceID,Value="$_instance_id"
 
     echo "Running validation script '$_validation_script' on volume '$_volume_id'."
-    var=$(date +%s%3N)
+    ts=$(date +%s%3N)
     if validate_database "$_validation_script" "$_mount_point" "$_snapshot_id" "$_volume_id"; then
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation succeeded. $_snapshot_id. $_instance_id"
+            timestamp=$ts,message="Backup snapshot ($_snapshot_id) validation succeeded for instance $_instance_id."
+        # We can delete the snapshot now it has been validated.
+        echo "Deleting snapshot '$_snapshot_id' ..."
+        if aws ec2 delete-snapshot --snapshot-id "$_snapshot_id"; then
+            echo "Deleted snapshot '$_snapshot_id'."
+        else
+            echo "Error: Failed to delete snapshot '$_snapshot_id'."
+        fi
     else
         echo "Validation failed for database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
-            timestamp=$var,message="Backup snapshot validation failed. $_snapshot_id. $_instance_id"
+            timestamp=$ts,message="Backup snapshot ($_snapshot_id) validation failed for instance $_instance_id."
     fi
 
     # Unmount the device, detach the volume and delete it when the validation is done. We
@@ -190,10 +213,10 @@ create_snapshot() {
         if [ $_wait_time -gt $_wait_timeout ]; then
             echo "Error: Waited $_wait_timeout seconds for snapshot '$__snapshot_id'" \
                  "to complete." 
-            var=$(date +%s%3N)
+            ts=$(date +%s%3N)
             aws logs put-log-events --log-group-name testy-logs \
                                     --log-stream-name snapshot-id --log-events \
-            timestamp=$var,message="Testy backup failed. $__snapshot_id. $_instance_id"
+            timestamp=$ts,message="Testy backup ($__snapshot_id) failed for instance $_instance_id."
             return 1
         fi
 
@@ -204,10 +227,10 @@ create_snapshot() {
             --output text)
         ((_wait_time+=_wait_interval))
     done
-    var=$(date +%s%3N)
+    ts=$(date +%s%3N)
     aws logs put-log-events --log-group-name testy-logs \
                             --log-stream-name snapshot-id --log-events \
-    timestamp=$var,message="Testy backup succeeded. $__snapshot_id. $_instance_id"
+    timestamp=$ts,message="Testy backup ($__snapshot_id) succeeded for instance $_instance_id."
 }
 
 # Create a new EBS volume from the specified snapshot id that can be attached to
