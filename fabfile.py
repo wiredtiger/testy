@@ -189,9 +189,8 @@ def start(c, workload, config_file=None):
         set_value(c, "application", "config_file", config_file)
         skip_services = True
     else:
-        if config_file != None:
-            raise Exit(f"Option --config-file is only specified fo test_format workloads.")
-
+        if config_file:
+            raise Exit(f"Option --config-file is only specified for test_format workloads.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -241,7 +240,7 @@ def stop(c):
     
     if not skip_services:
         # Stop service timers for the workloads that have it running.
-        stop_service_timer(c, workload)
+        stop_service_timers(c, workload)
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -610,9 +609,8 @@ def parser_operation(c, func, section, key=None, value=None):
     else:
         raise Exit(f"Error: {result.stderr}")
     
-# Stop the service timer
-def stop_service_timer(c, workload):
-    # Stop service timers.
+# Stop the service timers
+def stop_service_timers(c, workload):
     for timer in ["backup_timer", "crash_timer"]:
         timer_name = get_service_instance_name(
             Path(get_value(c, "testy", timer)).name, workload)
@@ -633,9 +631,8 @@ def stop_service_timer(c, workload):
         print("A crash test is currently in progress. The service will terminate when " \
             "the crash test completes.")
 
-# Disable the crash and backup services for the current workload.
+# Disable the crash and backup services for the specified workload.
 def disable_crash_backup_services(c, workload):
-    # Disable service timers for the current workload.
     timer_name = get_service_instance_name(
         Path(get_value(c, "testy", "backup_timer")).name, workload)
     if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
