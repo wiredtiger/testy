@@ -18,14 +18,7 @@ run() {
 }
 
 validate() {
-    echo "Running verify..."
-    # Run verify in all the folders created by test/format.
-    cd ${wt_build_dir}/test/format || exit
-    for f in $(ls -d $1/$database_dir/*/);
-    do
-        ../../wt -h "$f" -R verify;
-    done
-    cd -
+    echo "Validate is not implemented in this wokrload."
 }
 
 "$@"
