@@ -82,8 +82,7 @@ def terminate(c, instance_id=None, instance_name=None):
         print("Only specify one argument, please use the --help option to read about the command.")
         return
 
-    if instance_id is None:
-        # Retrieve the instance id using the name.
+    if not instance_id:
         instance_id = get_instance_id_from_name(instance_name)
 
     try:
