@@ -172,7 +172,7 @@ def populate(c, workload):
 #   (3) testy-crash
 @task
 def start(c, workload, config_file=None):
-    
+
     current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
     skip_services = False
@@ -196,7 +196,8 @@ def start(c, workload, config_file=None):
         set_value(c, "application", "config_file", config_file)
         skip_services = True
     else:
-        assert config_file == None
+        if config_file != None:
+            raise Exit(f"Option --config-file is only specified fo test_format workloads.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -241,7 +242,7 @@ def stop(c):
         return
 
     if workload == "test_format":
-        skip_services == True
+        skip_services = True
     
     if not skip_services:
         # Stop service timers.

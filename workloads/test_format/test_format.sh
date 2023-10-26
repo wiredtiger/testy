@@ -18,7 +18,7 @@ run() {
 }
 
 validate() {
-    echo "Validate is not implemented in this wokrload."
+    echo "Validate is not implemented in this workload."
 }
 
 "$@"
