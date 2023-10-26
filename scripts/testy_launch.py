@@ -83,6 +83,18 @@ def get_tag_value_from_resource(resource_id, key):
         raise Exit(f"Unable to retrieve value for key '{key}' from resource '{resource_id}'")
     return value
 
+def get_instance_id_from_name(name):
+    result = local(f"aws ec2 describe-instances \
+        --filters Name=tag:Name,Values={name} \
+        --query 'Reservations[*].Instances[*].InstanceId' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    value = result.stdout.strip()
+    if not value:
+        raise Exit(f"Unable to retrieve the instance ID from the name '{name}'.")
+    return value
+
 def get_volume_id_from_instance(instance_id):
     result = local(f"aws ec2 describe-volumes \
         --filters Name=attachment.instance-id,Values={instance_id} \

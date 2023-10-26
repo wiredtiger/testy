@@ -7,7 +7,7 @@ from invoke.exceptions import Exit
 from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
-from scripts.testy_launch import get_instances_info, get_launch_templates, get_snapshots, launch_from_distro, \
+from scripts.testy_launch import get_instance_id_from_name, get_instances_info, get_launch_templates, get_snapshots, launch_from_distro, \
     launch_from_snapshot, terminate_instance
 
 testy = "\033[1;36mtesty\033[0m"
@@ -73,7 +73,23 @@ def launch_snapshot(c, snapshot_id):
 
 # Terminate an AWS instance.
 @task
-def terminate(c, instance_id):
+def terminate(c, instance_id=None, instance_name=None):
+    if not instance_id and not instance_name:
+        print("Missing arguments, please use the --help option to read about the command.")
+        return
+
+    if instance_id and instance_name:
+        print("Only specify one argument, please use the --help option to read about the command.")
+        return
+
+    if instance_name is not None:
+        if not instance_name:
+            print("The given instance_name is invalid")
+            return
+
+        # Retrieve the instance id.
+        instance_id = get_instance_id_from_name(instance_name)
+
     try:
         terminate_instance(instance_id)
     except Exception as e:
