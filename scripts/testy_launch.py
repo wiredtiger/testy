@@ -23,6 +23,16 @@ def get_image_id(image_name):
     image_id = result.stdout.strip()
     return image_id
 
+# Get information about existing instances.
+def get_instances_info():
+    result = local("aws ec2 describe-instances \
+        --filters Name=instance-state-name,Values=running \
+        --query 'Reservations[*].Instances[*].{Instance:InstanceId,Name:Tags[?Key==`Name`]|[0].Value}' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    return result.stdout.strip()
+
 # Get all the available launch templates and return the result as a list.
 def get_launch_templates():
     result = local("aws ec2 describe-launch-templates \

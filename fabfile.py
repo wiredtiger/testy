@@ -7,7 +7,7 @@ from invoke.exceptions import Exit
 from invocations.console import confirm
 from fabric import Connection, task
 from pathlib import Path
-from scripts.testy_launch import get_launch_templates, get_snapshots, launch_from_distro, \
+from scripts.testy_launch import get_instances_info, get_launch_templates, get_snapshots, launch_from_distro, \
     launch_from_snapshot, terminate_instance
 
 testy = "\033[1;36mtesty\033[0m"
@@ -429,15 +429,16 @@ def snapshot_delete(c, snapshot_id=None):
             raise Exit(result.stderr)
         print(f"Deleted snapshot '{snapshot_id}'.")       
 
-# The list function takes three optional arguments: distros, snapshots and workloads.
+# The list function takes the following optional arguments:
 #    --distros    List the available distributions for launching a testy server.
+#    --instances  Give information about the existing instances.
 #    --snapshots  List the snapshots created from scheduled backups, validation failure,
 #                 and wiredtiger failure.
 #    --workloads  List the workloads available on the specified testy server. The -H
 #                 option is required.
 @task
-def list(c, distros=False, snapshots=False, workloads=False):
-    if not distros and not snapshots and not workloads:
+def list(c, distros=False, instances=False, snapshots=False, workloads=False):
+    if not distros and not instances and not snapshots and not workloads:
         print("Missing arguments, please use the --help option to read about the command.")
         return
 
@@ -451,9 +452,22 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable distros: \033[0m")
             if launch_templates:
                 for template in launch_templates:
-                    print(f"{template}")
+                    print(template)
             else:
                 print("No launch templates found.")
+
+    if instances:
+        instances_info = None
+        try:
+            instances_info = get_instances_info()
+        except Exception as e:
+            print(f"Error: {str(e)}")
+        else:
+            print("\n\033[1mAvailable instances: \033[0m")
+            if instances_info:
+                print(instances_info)
+            else:
+                print("No instances found.")
 
     if snapshots:
         snapshots = None
@@ -465,7 +479,7 @@ def list(c, distros=False, snapshots=False, workloads=False):
             print("\n\033[1mAvailable snapshots: \033[0m")
             if snapshots:
                 for snapshot in snapshots:
-                    print(f"{snapshot}")
+                    print(snapshot)
             else:
                 print("No snapshots found.")
 
