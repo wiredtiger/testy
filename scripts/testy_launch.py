@@ -168,7 +168,7 @@ def wait_on_status_check(instance_id):
 # contains a user-friendly error message.
 
 # Launch an AWS instance given a distro.
-def launch_from_distro(distro, iam):
+def launch_from_distro(distro, iam_profile):
 
     if not launch_template_exists(distro):
         return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
@@ -191,15 +191,23 @@ def launch_from_distro(distro, iam):
         instance_id = result.stdout.strip()
         wait_on_status_check(instance_id)
 
-        # Attach IAM role if requested.
-        if iam:
-            result = local(f"aws ec2 associate-iam-instance-profile \
-                --instance-id {instance_id} \
-                --iam-instance-profile Name=testy_iam", hide=True, warn=True)
+        # Attach IAM profile if requested.
+        if iam_profile:
+            result = local(f"aws iam get-role \
+                --role-name {iam_profile} \
+                --output-text", hide=True, warn=True)
+
             if result.stderr:
-                print("Failed at attaching IAM role.", flush=True)
+                print(f"The IAM profile '{iam_profile}' does not exist.", flush=True)
+
             else:
-                print("IAM role attached!", flush=True)
+                result = local(f"aws ec2 associate-iam-instance-profile \
+                    --instance-id {instance_id} \
+                    --iam-instance-profile Name={iam_profile}", hide=True, warn=True)
+                if result.stderr:
+                    print(f"Failed at attaching the IAM profile '{iam_profile}'.", flush=True)
+                else:
+                    print(f"The IAM profile '{iam_profile}' has been successfully attached!", flush=True)
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
