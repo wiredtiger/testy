@@ -101,8 +101,7 @@ workload.options.drop_trigger = (db_size_target_gb + 20) * 1024
 workload.options.drop_target = (db_size_target_gb - 20) * 1024
 
 # Enable mirror tables and random table values.
-# FIXME: WT-11045 temporarily disable mirroring until bug is fixed. 
-workload.options.mirror_tables = False
+workload.options.mirror_tables = True
 workload.options.random_table_values = True
 
 # Enable background compaction with a compaction threshold of 100MB.
