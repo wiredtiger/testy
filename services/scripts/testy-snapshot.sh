@@ -203,7 +203,7 @@ create_snapshot() {
 
     # Wait for the snapshot to complete and be ready for use. Return an error after timing out.
     local _snapshot_status=
-    local _wait_timeout=7200
+    local _wait_timeout=10800
     local _wait_interval=10
     local _wait_time=0
 
