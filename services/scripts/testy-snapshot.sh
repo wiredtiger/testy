@@ -201,10 +201,9 @@ create_snapshot() {
     aws ec2 create-tags --resources "$__snapshot_id" \
         --tags "Key=Name,Value=testy-${_ltname}-${__snapshot_id//-/}"
 
-    # Wait for the snapshot to complete and be ready for use. Return an error after
-    # 1 hour.
+    # Wait for the snapshot to complete and be ready for use. Return an error after timing out.
     local _snapshot_status=
-    local _wait_timeout=3600
+    local _wait_timeout=10800
     local _wait_interval=10
     local _wait_time=0
 
