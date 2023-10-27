@@ -322,7 +322,7 @@ def terminate_instance(instance_id):
     if status == 'shutting-down':
         print(f"The instance '{instance_id}' is shutting down.")
     elif status == 'terminated':
-        print(f"The instance '{instance_id}' is already terminated.")
+        print(f"The instance '{instance_id}' is terminating.")
 
 if __name__ == "__main__":
 
