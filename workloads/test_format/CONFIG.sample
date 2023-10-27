@@ -1,0 +1,14 @@
+background_compact=1
+background_compact.free_space_target=1
+backup=1
+btree.huffman_value=0
+cache.minimum=500
+format.abort=1
+ops.salvage=1
+ops.verify=1
+runs.in_memory=0
+runs.mirror=1
+runs.rows=1000000:5000000
+runs.tables=3:10
+runs.threads=4:32
+runs.timer=6:30

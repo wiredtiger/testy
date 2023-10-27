@@ -169,11 +169,28 @@ def populate(c, workload):
 #   (2) testy-backup
 #   (3) testy-crash
 @task
-def start(c, workload):
+def start(c, workload, config_file=None):
+
+    current_workload = get_value(c, "application", "current_workload")
+    service_name = Path(get_value(c, "testy", "testy_service")).name
+    skip_services = False
 
     if testy_running(c):
         raise Exit(f"\n{testy} is already running. Use 'fab restart' to " \
                     "change the workload.")
+
+    # If we are running test/format we need to specify which config file to use.
+    if workload == "test_format":
+        if not config_file:
+            print("Please specify a configuration file through 'fab -H <host> start test_format \
+                  --config-file=<config>")
+            print("To upload a config file, use fab -H <host> workload --format-config=<config>")
+            return
+        set_value(c, "application", "config_file", config_file)
+        skip_services = True
+    else:
+        if config_file:
+            raise Exit(f"Option --config-file is only specified for test_format workloads.")
 
     # Verify the specified workload exists.
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
@@ -181,11 +198,16 @@ def start(c, workload):
         raise Exit(f"\nUnable to start {testy}: Workload '{workload}' not found.")
 
     # Enable service timers.
-    for timer in ["backup_timer", "crash_timer"]:
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", timer)).name, workload)
-        if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
-            print(f"Failed to schedule ${timer_name} service timer.")
+    if not skip_services:
+        for timer in ["backup_timer", "crash_timer"]:
+            timer_name = get_service_instance_name(
+                Path(get_value(c, "testy", timer)).name, workload)
+            if not c.sudo(f"systemctl enable {timer_name}", hide=True, warn=True):
+                print(f"Failed to schedule ${timer_name} service timer.")
+
+    # Update the environment variables for the shell scripts from .testy to systemd services 
+    conf = get_systemd_service_conf(c, "environment")
+    c.sudo(f"echo '{conf}' | sudo tee /etc/systemd/system/{service_name}.d/env.conf >/dev/null")
     c.sudo("systemctl daemon-reload")
 
     # Start the testy-run service which manages the long-running
@@ -207,31 +229,18 @@ def start(c, workload):
 @task
 def stop(c):
 
+    skip_services = False
     workload = get_value(c, "application", "current_workload")
     if not workload:
         print(f"\nNothing to stop. No workload is defined.")
         return
 
-    # Stop service timers.
-    for timer in ["backup_timer", "crash_timer"]:
-        timer_name = get_service_instance_name(
-            Path(get_value(c, "testy", timer)).name, workload)
-        c.sudo(f"systemctl stop {timer_name}", user="root")
-
-    # Check if services are still in progress.
-    service_name = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_service")).name, workload)
-    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
-        print("A backup is currently in progress. The service will terminate when the " \
-              "backup completes.")
-    service_name = get_service_instance_name(
-        Path(get_value(c, "testy", "crash_service")).name, workload)
-    result = c.run(
-        f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
-        hide=True)
-    if result.stdout.strip() != "0":
-        print("A crash test is currently in progress. The service will terminate when " \
-              "the crash test completes.")
+    if workload == "test_format":
+        skip_services = True
+    
+    if not skip_services:
+        # Stop service timers for the workloads that have it running.
+        stop_service_timers(c, workload)
 
     # Stop testy service.
     testy_service = get_service_instance_name(
@@ -246,15 +255,9 @@ def stop(c):
     else:
         print(f"{testy} is not running.")
 
-    # Disable service timers for the current workload.
-    timer_name = get_service_instance_name(
-        Path(get_value(c, "testy", "backup_timer")).name, workload)
-    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-        print(f"Backup scheduling is disabled.")
-    timer_name = get_service_instance_name(
-        Path(get_value(c, "testy", "crash_timer")).name, workload)
-    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
-        print(f"Crash test scheduling is disabled.")
+    if not skip_services:
+        # Disable the crash and backup services.
+        disable_crash_backup_services(c, workload)
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
@@ -336,28 +339,31 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
 
-# The workload function takes two optional arguments: upload and describe. If no arguments are
-# provided, the current workload is returned.
+# The workload function takes three optional arguments: upload, upload_config and describe. 
+# If no arguments are provided, the current workload is returned.
 @task
-def workload(c, upload=None, describe=None):
+def workload(c, upload=None, describe=None, upload_config=None):
     """ Upload and describe workloads.
-    Up to two optional arguments can be taken at a time. If more than one option is specified at
+    Up to three optional arguments can be taken at a time. If more than one option is specified at
     once, they will be executed in the following order (regardless of order they are called):
        1. upload
        2. describe
+       3. upload_config
     If an option fails at any point, it will print an error message, exit the current option and 
     continue running the following options.  
     """
     current_workload = get_value(c, "application", "current_workload")
     user = get_value(c, "application", "user")
+    dest = get_value(c, "application", "workload_dir")
 
-    # Uploads a workload from a local directory to the testy server. Upload takes the full path of 
-    # the archive, including the archive name. After it is uploaded to the server, the archive gets
-    # unpacked in the workloads directory. 
+    # Uploads a workload from a local directory to the testy server. Upload takes the absolute or
+    # relative  of the archive. After it is uploaded to the server, the archive gets unpacked in 
+    # the workloads directory. The workload should be in a directory named after the workload, with 
+    # a shell script of the same workload name. 
     if upload:
-        dest = get_value(c, "application", "workload_dir")
-        src = f"{dest}/{upload}"
-        workload_name = Path(src).stem.split('.')[0]
+        workload_name = Path(upload).stem.split('.')[0]
+        archived_name = os.path.basename(upload)
+        src = f"{dest}/{archived_name}"
         exists = overwrite = False
 
         if c.run(f"[ -d {dest}/{workload_name} ] ", warn=True):
@@ -370,24 +376,25 @@ def workload(c, upload=None, describe=None):
         if exists == overwrite:
             script = get_value(c, "testy", "unpack_script")
             try: 
-                c.put(upload, "/tmp", preserve_mode=True)
+                c.put(upload, "/tmp/", preserve_mode=True)
             except Exception as e:
                 print(e)
                 print(f"Upload failed for workload '{workload_name}'.")
             else:
-                copy = c.sudo(f"cp /tmp/{upload} {src}", user=user, warn=True)
+                c.sudo(f"rm -rf {dest}/{workload_name}")
+                copy = c.sudo(f"cp /tmp/{archived_name} {src}", user=user, warn=True)
                 unpack = c.sudo(f"python3 {script} unpack_archive {src} {dest}", user=user, \
                     warn=True)
                 if copy and unpack: 
                     print(f"Upload succeeded! Workload '{workload_name}' ready for use.")
                 else:
                     print(f"Failed to add '{workload_name}'.")
-                c.sudo(f"rm -f {src} /tmp/{upload}")
+                c.sudo(f"rm -f {src} /tmp/{archived_name}")
 
     # Describes the specified workload by running the describe function as defined in the workload
     # interface file. A workload must be specified for the describe option. 
     if describe:
-        wif = get_value(c, "application", "workload_dir") + f"/{describe}/{describe}.sh"
+        wif = f"{dest}/{describe}/{describe}.sh"
         command = wif + " describe"
         result = c.sudo(command, user=user, warn=True)
         if not result: 
@@ -395,14 +402,31 @@ def workload(c, upload=None, describe=None):
         elif result.stdout == "":
             print(f"No description provided for workload '{describe}'.")
     
+    # Upload a test format config file to the test_format workloads directory ready for use, this 
+    # function takes both relative or absolute paths to your local config file. 
+    if upload_config:
+        config_filename = os.path.basename(upload_config)
+        src = f"{dest}/test_format/{config_filename}"
+
+        try:
+            c.put(upload_config, f"/tmp/", preserve_mode=True)
+        except Exception as e:
+            print(e)
+            print(f"Upload failed for config file '{config_filename}'.")
+        else:
+            if c.sudo(f"cp -f /tmp/{config_filename} {src}", user=user, warn=True):
+                print(f"Upload succeeded for config file '{config_filename}'.")
+            c.sudo(f"rm -f /tmp/{config_filename}")
+
+    
     # If no option has been specified, print the current workload and return as usual.  
-    if not describe and not upload:
+    if not describe and not upload and not upload_config:
         if current_workload:
             print(f"The current workload is {current_workload}.")
         else: 
             print("The current workload is unspecified.")
     
-    return current_workload or None
+    return current_workload
 
 # The function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with
 # no spaces, and delete the corresponding snapshots.
@@ -584,6 +608,39 @@ def parser_operation(c, func, section, key=None, value=None):
         return result.stdout
     else:
         raise Exit(f"Error: {result.stderr}")
+    
+# Stop the service timers
+def stop_service_timers(c, workload):
+    for timer in ["backup_timer", "crash_timer"]:
+        timer_name = get_service_instance_name(
+            Path(get_value(c, "testy", timer)).name, workload)
+        c.sudo(f"systemctl stop {timer_name}", user="root")
+
+    # Check if services are still in progress.
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_service")).name, workload)
+    if c.run(f"systemctl is-active {service_name}", hide=True, warn=True):
+        print("A backup is currently in progress. The service will terminate when the " \
+            "backup completes.")
+    service_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_service")).name, workload)
+    result = c.run(
+        f"systemctl show --property MainPID {service_name} | awk -F '=' '{{print $2}}'",
+        hide=True)
+    if result.stdout.strip() != "0":
+        print("A crash test is currently in progress. The service will terminate when " \
+            "the crash test completes.")
+
+# Disable the crash and backup services for the specified workload.
+def disable_crash_backup_services(c, workload):
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "backup_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Backup scheduling is disabled.")
+    timer_name = get_service_instance_name(
+        Path(get_value(c, "testy", "crash_timer")).name, workload)
+    if c.sudo(f"systemctl disable {timer_name}", hide=True, warn=True):
+        print(f"Crash test scheduling is disabled.")
 
 # Create framework superuser account.
 def create_user(c, username):
