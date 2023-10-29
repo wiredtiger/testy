@@ -279,14 +279,12 @@ def restart(c, workload=None, validate=False):
     # Validate the stopped workload, if any.
     if validate:
         if current_workload:
-        # FIXME-WTBUILD-108
-            print("Validation skipped, see WTBUILD-108.")
-        #     user = get_value(c, "application", "user")
-        #     wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
-        #     command = wif + " validate"
-        #     result = c.sudo(command, user=user, warn=True)
-        #     if not result:
-        #         raise Exit(f"Validate failed for '{current_workload}' workload.")
+            user = get_value(c, "application", "user")
+            wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
+            command = get_env(c, "environment") + " bash " + wif + " validate"
+            result = c.sudo(command, user=user, warn=True)
+            if not result:
+                raise Exit(f"Validate failed for '{current_workload}' workload.")
         else:
             print("Validation skipped, no workload was previously defined.")
 
