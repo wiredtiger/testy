@@ -23,6 +23,16 @@ def get_image_id(image_name):
     image_id = result.stdout.strip()
     return image_id
 
+# Get information about existing instances.
+def get_instances_info():
+    result = local("aws ec2 describe-instances \
+        --filters Name=instance-state-name,Values=running \
+        --query 'Reservations[*].Instances[*].{Instance:InstanceId,Name:Tags[?Key==`Name`]|[0].Value}' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    return result.stdout.strip()
+
 # Get all the available launch templates and return the result as a list.
 def get_launch_templates():
     result = local("aws ec2 describe-launch-templates \
@@ -71,6 +81,18 @@ def get_tag_value_from_resource(resource_id, key):
     value = result.stdout.strip()
     if not value:
         raise Exit(f"Unable to retrieve value for key '{key}' from resource '{resource_id}'")
+    return value
+
+def get_instance_id_from_name(name):
+    result = local(f"aws ec2 describe-instances \
+        --filters Name=tag:Name,Values={name} \
+        --query 'Reservations[*].Instances[*].InstanceId' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    value = result.stdout.strip()
+    if not value:
+        raise Exit(f"Unable to retrieve the instance ID from the name '{name}'.")
     return value
 
 def get_volume_id_from_instance(instance_id):
@@ -186,7 +208,7 @@ def attach_iam_profile(instance_id, iam_profile):
 # contains a user-friendly error message.
 
 # Launch an AWS instance given a distro.
-def launch_from_distro(distro, iam_profile):
+def launch_from_distro(distro, instance_name, iam_profile):
 
     if not launch_template_exists(distro):
         return {"status": 1, "msg": f"The distro '{distro}' does not exist."}
@@ -215,7 +237,8 @@ def launch_from_distro(distro, iam_profile):
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
-        instance_name = f"testy-{distro}-{instance_id.replace('-','')}"
+        if not instance_name:
+            instance_name = f"testy-{distro}-{instance_id.replace('-','')}"
         set_tag_for_resource(instance_id, "Name", instance_name)
         set_tag_for_resource(volume_id, "Name", f"testy-{distro}-{volume_id.replace('-','')}")
 
@@ -286,6 +309,20 @@ def launch_from_snapshot(snapshot_id):
 
     return {"status": 0, "user": user, "hostname": hostname,
         "instance_id": instance_id, "instance_name": instance_name}
+
+# Terminate an AWS instance given its ID.
+def terminate_instance(instance_id):
+    result = local(f"aws ec2 terminate-instances \
+        --instance-ids {instance_id} \
+        --query 'TerminatingInstances[*].CurrentState.Name' \
+        --output text", hide=True, warn=True)
+    if result.stderr:
+        raise Exit(result.stderr)
+    status = result.stdout.strip()
+    if status == 'shutting-down':
+        print(f"The instance '{instance_id}' is shutting down.")
+    elif status == 'terminated':
+        print(f"The instance '{instance_id}' is terminating.")
 
 if __name__ == "__main__":
 
