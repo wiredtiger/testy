@@ -469,11 +469,9 @@ def snapshot_delete(c, snapshot_id=None):
 #                 and wiredtiger failure.
 #    --workloads  List the workloads available on the specified testy server. The -H
 #                 option is required.
+# By default, the list function does not print anything.
 @task
 def list(c, distros=False, instances=False, snapshots=False, workloads=False):
-    if not distros and not instances and not snapshots and not workloads:
-        print("Missing arguments, please use the --help option to read about the command.")
-        return
 
     if distros:
         launch_templates = None
