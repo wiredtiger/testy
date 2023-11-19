@@ -47,8 +47,8 @@ def get_launch_templates():
 def get_snapshots():
     result = local("aws ec2 describe-snapshots \
         --filters 'Name=tag:Application,Values=testy' \
-        --query 'Snapshots[*].SnapshotId' \
-        --output text", hide=True, warn=True)
+        --query 'Snapshots[*].{ID:SnapshotId,Validation:Tags[?Key==`Validation`]|[0].Value}' \
+        --output yaml", hide=True, warn=True)
     if result.stderr:
         raise Exit(result.stderr)
     snapshots = result.stdout.strip()
