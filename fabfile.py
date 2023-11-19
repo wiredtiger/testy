@@ -451,7 +451,7 @@ def workload(c, upload=None, describe=None, upload_config=None):
 def snapshot_delete(c, snapshot_id=None):
     if not snapshot_id:
         print("Please specify the snapshot(s) you wish to delete through \
-              --snapshot_id=<snapshotid,snapshotid1> separated by a ',' .")
+              --snapshot_id=<snapshotid1,...,snapshotidn> separated by a ',' .")
         return
     
     snapshot_ids = snapshot_id.split(",")
