@@ -252,7 +252,7 @@ def launch_from_distro(distro, instance_name, iam_profile):
         "instance_id": instance_id, "instance_name": instance_name}
 
 # Launch an AWS instance from a snapshot ID.
-def launch_from_snapshot(snapshot_id):
+def launch_from_snapshot(snapshot_id, instance_name):
 
     if not snapshot_exists(snapshot_id):
         return {"status": 1, "msg": f"The snapshot '{snapshot_id}' does not exist."}
@@ -297,7 +297,8 @@ def launch_from_snapshot(snapshot_id):
 
         # Add 'Name' tags for the new instance and volume.
         volume_id = get_volume_id_from_instance(instance_id)
-        instance_name = f"testy-{ltname}-{instance_id.replace('-','')}"
+        if not instance_name:
+            instance_name = f"testy-{ltname}-{instance_id.replace('-','')}"
         set_tag_for_resource(instance_id, "Name", instance_name)
         set_tag_for_resource(volume_id, "Name", f"testy-{ltname}-{volume_id.replace('-','')}")
 
