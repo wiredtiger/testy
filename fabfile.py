@@ -52,9 +52,9 @@ def launch(c, distro, instance_name=None, iam_profile=None, wiredtiger_branch="d
 
 # Launch an AWS instance using a snapshot.
 @task
-def launch_snapshot(c, snapshot_id):
+def launch_snapshot(c, snapshot_id, instance_name=None):
 
-    result = launch_from_snapshot(snapshot_id)
+    result = launch_from_snapshot(snapshot_id, instance_name)
     if result['status'] != 0:
         print(f"Launch failed. {result['msg']}")
         return
