@@ -54,22 +54,40 @@ def launch(c, distro, instance_name=None, iam_profile=None, wiredtiger_branch="d
 @task
 def launch_snapshot(c, snapshot_id, instance_name=None):
 
+    hostname = None
+    user = None
     result = launch_from_snapshot(snapshot_id, instance_name)
-    if result['status'] != 0:
+    success = result['status'] == 0
+
+    if not success:
         print(f"Launch failed. {result['msg']}")
+    else:
+        user = result['user']
+        hostname = result['hostname']
+
+        # Print summary on success.
+        print("\n~~~~~~~~~~~~~~")
+        print(f"Launch Summary")
+        print("~~~~~~~~~~~~~~")
+        print(f"The user is '{user}'")
+        print(f"The host is '{hostname}'")
+        print(f"The instance id is '{result['instance_id']}'")
+        print(f"The instance name is '{result['instance_name']}'\n")
+
+    return success, user, hostname
+
+# Launch an AWS instance using a snapshot and validate it.
+@task
+def validate_snapshot(c, snapshot_id, instance_name=None):
+    success, user, hostname = launch_snapshot(c, snapshot_id, instance_name)
+    if not success:
         return
-
-    user = result['user']
-    hostname = result['hostname']
-
-    # Print summary on success.
-    print("\n~~~~~~~~~~~~~~")
-    print(f"Launch Summary")
-    print("~~~~~~~~~~~~~~")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
-    print(f"The instance id is '{result['instance_id']}'")
-    print(f"The instance name is '{result['instance_name']}'\n")
+    try:
+        print('Validating the database files...')
+        with Connection(f"{user}@{hostname}") as conn:
+            validate(conn)
+    except Exception as e:
+        print(f"The EC2 instance was launched successfully but the validation failed: {e}")
 
 # Terminate an AWS instance.
 @task
