@@ -280,7 +280,7 @@ def stop(c):
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
-def restart(c, workload=None, validate=False):
+def restart(c, workload=None, validate_workload=False):
 
     # If there is no current workload and no specified workload, return.
     current_workload = get_value(c, "application", "current_workload")
@@ -295,17 +295,9 @@ def restart(c, workload=None, validate=False):
     # Stop the testy workload.
     stop(c)
 
-    # Validate the stopped workload, if any.
-    if validate:
-        if current_workload:
-            user = get_value(c, "application", "user")
-            wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
-            command = get_env(c, "environment") + " bash " + wif + " validate"
-            result = c.sudo(command, user=user, warn=True)
-            if not result:
-                raise Exit(f"Validate failed for '{current_workload}' workload.")
-        else:
-            print("Validation skipped, no workload was previously defined.")
+    # Validate the stopped workload.
+    if validate_workload:
+        validate(c)
 
     # Restart the testy workload.    
     start(c, workload)
@@ -355,6 +347,21 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
     else:
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
+
+# Execute the validate function defined in the workload.
+@task
+def validate(c):
+    workload = get_value(c, "application", "current_workload")
+    if not workload:
+        print("Validation skipped, no workload was previously defined.")
+        return
+
+    user = get_value(c, "application", "user")
+    wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
+    command = get_env(c, "environment") + " bash " + wif + " validate"
+    result = c.sudo(command, user=user, warn=True)
+    if not result:
+        raise Exit(f"Validate failed for '{workload}' workload.")
 
 # The workload function takes three optional arguments: upload, upload_config and describe. 
 # If no arguments are provided, the current workload is returned.
