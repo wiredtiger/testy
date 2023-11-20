@@ -208,7 +208,6 @@ def populate(c, workload):
 @task
 def start(c, workload, config_file=None):
 
-    current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
     skip_services = False
 
