@@ -54,22 +54,40 @@ def launch(c, distro, instance_name=None, iam_profile=None, wiredtiger_branch="d
 @task
 def launch_snapshot(c, snapshot_id, instance_name=None):
 
+    hostname = None
+    user = None
     result = launch_from_snapshot(snapshot_id, instance_name)
-    if result['status'] != 0:
+    success = result['status'] == 0
+
+    if not success:
         print(f"Launch failed. {result['msg']}")
+    else:
+        user = result['user']
+        hostname = result['hostname']
+
+        # Print summary on success.
+        print("\n~~~~~~~~~~~~~~")
+        print(f"Launch Summary")
+        print("~~~~~~~~~~~~~~")
+        print(f"The user is '{user}'")
+        print(f"The host is '{hostname}'")
+        print(f"The instance id is '{result['instance_id']}'")
+        print(f"The instance name is '{result['instance_name']}'\n")
+
+    return success, user, hostname
+
+# Launch an AWS instance using a snapshot and validate it.
+@task
+def validate_snapshot(c, snapshot_id, instance_name=None):
+    success, user, hostname = launch_snapshot(c, snapshot_id, instance_name)
+    if not success:
         return
-
-    user = result['user']
-    hostname = result['hostname']
-
-    # Print summary on success.
-    print("\n~~~~~~~~~~~~~~")
-    print(f"Launch Summary")
-    print("~~~~~~~~~~~~~~")
-    print(f"The user is '{user}'")
-    print(f"The host is '{hostname}'")
-    print(f"The instance id is '{result['instance_id']}'")
-    print(f"The instance name is '{result['instance_name']}'\n")
+    try:
+        print('Validating the database files...')
+        with Connection(f"{user}@{hostname}") as conn:
+            validate(conn)
+    except Exception as e:
+        print(f"The EC2 instance was launched successfully but the validation failed: {e}")
 
 # Terminate an AWS instance.
 @task
@@ -190,7 +208,6 @@ def populate(c, workload):
 @task
 def start(c, workload, config_file=None):
 
-    current_workload = get_value(c, "application", "current_workload")
     service_name = Path(get_value(c, "testy", "testy_service")).name
     skip_services = False
 
@@ -280,7 +297,7 @@ def stop(c):
 
 # Restarts with the specified workload. If no workload is specified, take the current workload. 
 @task
-def restart(c, workload=None, validate=False):
+def restart(c, workload=None, validate_workload=False):
 
     # If there is no current workload and no specified workload, return.
     current_workload = get_value(c, "application", "current_workload")
@@ -295,17 +312,9 @@ def restart(c, workload=None, validate=False):
     # Stop the testy workload.
     stop(c)
 
-    # Validate the stopped workload, if any.
-    if validate:
-        if current_workload:
-            user = get_value(c, "application", "user")
-            wif = get_value(c, "application", "workload_dir") + f"/{current_workload}/{current_workload}.sh"
-            command = get_env(c, "environment") + " bash " + wif + " validate"
-            result = c.sudo(command, user=user, warn=True)
-            if not result:
-                raise Exit(f"Validate failed for '{current_workload}' workload.")
-        else:
-            print("Validation skipped, no workload was previously defined.")
+    # Validate the stopped workload.
+    if validate_workload:
+        validate(c)
 
     # Restart the testy workload.    
     start(c, workload)
@@ -355,6 +364,21 @@ def update(c, wiredtiger_branch=None, testy_branch=None):
     else:
         raise Exit("One or more errors occurred during update. Please retry the " \
                    f"update or run 'fab start' to restart {testy}.")
+
+# Execute the validate function defined in the workload.
+@task
+def validate(c):
+    workload = get_value(c, "application", "current_workload")
+    if not workload:
+        print("Validation skipped, no workload was previously defined.")
+        return
+
+    user = get_value(c, "application", "user")
+    wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
+    command = get_env(c, "environment") + " bash " + wif + " validate"
+    result = c.sudo(command, user=user, warn=True)
+    if not result:
+        raise Exit(f"Validate failed for '{workload}' workload.")
 
 # The workload function takes three optional arguments: upload, upload_config and describe. 
 # If no arguments are provided, the current workload is returned.
