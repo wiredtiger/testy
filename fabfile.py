@@ -89,6 +89,14 @@ def validate_snapshot(c, snapshot_id, instance_name=None):
     except Exception as e:
         print(f"The EC2 instance was launched successfully but the validation failed: {e}")
 
+# Rename an AWS snapshot.
+@task
+def snapshot_rename(c, snapshot_id, name):
+    result = c.run(f'aws ec2 create-tags --resources {snapshot_id} --tags "Key=Name,Value={name}"')
+    if result.stderr:
+        raise Exit(result.stderr)
+    print(f"Renamed snapshot '{snapshot_id}' to '{name}'.")
+
 # Terminate an AWS instance.
 @task
 def terminate(c, instance_id=None, instance_name=None):
