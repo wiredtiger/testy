@@ -15,7 +15,7 @@ python3 -m pip install fabric invocations
 Launch an EC2 instance and install testy using the `fab launch` command:
 
 ```
-fab launch --distro=<distro> [--wiredtiger-brbanch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
+fab launch --distro=<distro> [--wiredtiger-branch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
 ```
  
 ### Install testy on an existing machine
@@ -78,7 +78,7 @@ fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_
 fab -H user@host workload
 ```
 
-- The `workload --upload` requires one argument, the compressed workload folder. The function uploads a workload from your local machine to the remote testy server. You need an archive containing a `workload` directory with a workload interface file `my-workload.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This extracts the files in the framework's 'workloads' directory, inside a folder named after the workload. The function prints an error message on failure, and delete any traces of the failed upload from the remote server.
+- The `workload --upload` requires one argument, the compressed workload folder. The function uploads a workload from your local machine to the remote testy server. You need an archive containing a `workload` directory with a workload interface file `my-workload.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This extracts the files in the framework's 'workloads' directory, inside a folder named after the workload. The function prints an error message on failure, and delete any traces of the failed upload from the remote server. To overwrite a workload, simply upload a workload with the same name and you will prompted if you wish to go ahead. 
 
   ```
   fab -H user@host workload --upload=<my-workload.zip>
