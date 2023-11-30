@@ -15,7 +15,7 @@ python3 -m pip install fabric invocations
 Launch an EC2 instance and install testy using the `fab launch` command:
 
 ```
-fab launch --distro=<distro> [--wiredtiger-brbanch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
+fab launch --distro=<distro> [--wiredtiger-branch=<wiredtiger_branch>] [--testy-branch=<testy_branch>]
 ```
  
 ### Install testy on an existing machine
@@ -69,7 +69,7 @@ fab -H user@host update [--wiredtiger-branch=branch] [--testy-branch=branch]
 ```
 
 ### `fab workload`
-The workload function has two options: upload and describe. If no option is given it returns the current workload. Up to two options can be given at a time in any order but they are be executed in the order of (1) `upload` and (2) `describe`. If one option fails, an error message is printed and the other options continue to execute.
+The workload function has three options: upload, upload config and describe. If no option is given it returns the current workload. Up to three options can be given at a time in any order but they are be executed in the order of (1) `upload` , (2) `describe` and (3) `upload-config`. If one option fails, an error message is printed and the other options continue to execute.
 
 ```
 fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_workload_name]
@@ -78,10 +78,15 @@ fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_
 fab -H user@host workload
 ```
 
-- The `workload --upload` requires one argument, the compressed workload folder. The function uploads a workload from your local machine to the remote testy server. You need an archive containing a `workload` directory with a workload interface file `my-workload.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This extracts the files in the framework's 'workloads' directory, inside a folder named after the workload. The function prints an error message on failure, and delete any traces of the failed upload from the remote server.
+- The `workload --upload` requires one argument, the compressed workload folder. The function uploads a workload from your local machine to the remote testy server. You need an archive containing a `workload` directory with a workload interface file `my-workload.sh`, and any other files needed to run the workload. The `workload` directory and workload interface file are required to share the same name to operate. Testy can extract most compressed file types. This extracts the files in the framework's 'workloads' directory, inside a folder named after the workload. The function prints an error message on failure, and delete any traces of the failed upload from the remote server. To overwrite a workload, simply upload a workload with the same name and you will prompted if you wish to go ahead. 
 
   ```
   fab -H user@host workload --upload=<my-workload.zip>
+  ```
+
+- The `workload --upload-config` requires one argument, a test format config file. The function uploads a config file from your local machine to the remote testy server. This will place the config file directly into the test format workload directory ready to run test format. 
+  ```
+  fab -H user@host workload --upload-config=<CONFIG.sample>
   ```
 
 - The `workload --describe` function takes an optional workload name as an argument and describes the given workload. If no argument is given, the current workload is used. If there is no current workload, an error message is printed. This description is implemented by the user in the workload's workload interface file `{workload}.sh`. If not implemented, the function prints a default message.
@@ -94,14 +99,20 @@ fab -H user@host workload
   ```
 
 ### `fab list`
-The list function has three options: distros, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message is printed and the other options continue to execute.
+The list function has four options: distros, instances, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message is printed and the other options continue to execute.
 
 - The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
 
   ```
   fab list --distros
   ```
-  
+
+- The `list -instances` command lists the available instances we have already launched.
+
+  ```
+  fab list --instances
+  ```
+
 - The `list --snapshots` command lists the available snapshots that can be used through the `fab launch-snapshot` command.
 
   ```
@@ -120,6 +131,13 @@ The `info` function allows you to see information relating to the testy service.
 ```
 fab -H user@host info
 ```
+
+### `fab snapshot-delete`
+The `snapshot-delete` function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
+```
+fab -H user@host snapshot-delete=<snapshot_id,snapshot_id1> 
+```
+
 
 ## Adding functions to fabfile.py
 
