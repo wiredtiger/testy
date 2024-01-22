@@ -86,7 +86,11 @@ def validate_snapshot(c, snapshot_id, instance_name=None):
         print('Validating the database files...')
         with Connection(f"{user}@{hostname}") as conn:
             validate(conn)
+            failure_file = get_value(c, "application", "failure_file") + "/output.txt"
+            c.sudo("mv" + f"{failure_file} {snapshot_id}")
     except Exception as e:
+        failure_file = get_value(c, "application", "failure_file") + "/output.txt"
+        c.sudo("mv" + f"{failure_file} {snapshot_id}")
         print(f"The EC2 instance was launched successfully but the validation failed: {e}")
 
 # Rename an AWS snapshot.
@@ -386,6 +390,7 @@ def validate(c):
     user = get_value(c, "application", "user")
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env(c, "environment") + " bash " + wif + " validate"
+
     result = c.sudo(command, user=user, warn=True)
     if not result:
         raise Exit(f"Validate failed for '{workload}' workload.")

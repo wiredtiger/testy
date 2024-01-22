@@ -486,6 +486,7 @@ validate_database() {
         
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
                         --tags Key=Validation,Value=failed
+    sudo mv ${failure_dir}/output.txt $_snapshot_id  
     return 1
 }
 
