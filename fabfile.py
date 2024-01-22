@@ -91,8 +91,6 @@ def validate_snapshot(c, snapshot_id, instance_name=None):
     except Exception as e:
         c.sudo(f"mv {failure_file} {snapshot_id}")
         print(f"The EC2 instance was launched successfully but the validation failed: {e}")
-    
-    
 
 # Rename an AWS snapshot.
 @task
@@ -391,12 +389,15 @@ def validate(c):
     user = get_value(c, "application", "user")
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env(c, "environment") + " bash " + wif + " validate"
+    failure_file = get_value(c, "application", "failure_file") + "/output.txt"
 
     result = c.sudo(command, user=user, warn=True)
-    failure_file = get_value(c, "application", "failure_file") + "/output.txt"
     if not result:
         raise Exit(f"Validate failed for '{workload}' workload.")
-
+    
+    # Remove the validate output file on success. 
+    c.sudo(f"rm {failure_file}", user=user, warn=True)
+    
 # The workload function takes three optional arguments: upload, upload_config and describe. 
 # If no arguments are provided, the current workload is returned.
 @task
