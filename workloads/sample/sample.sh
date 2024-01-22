@@ -1,5 +1,6 @@
 #! /bin/bash
 # Initial sample workload for use with the testy framework.
+set -e 
 
 describe() {
     echo "A sample workload for use with the testy framework."
@@ -19,9 +20,9 @@ run() {
 validate() {
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
     echo "Running verify..."
-    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify
+    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify 2>&1 | sudo tee ${failure_dir}/Output.txt
     echo "Validating mirrors..."
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir"
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir" 2>&1 | sudo tee ${failure_dir}/Output.txt
 }
 
 "$@"

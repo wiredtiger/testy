@@ -137,9 +137,10 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     # Create framework directories.
     testy_dir = config.get("application", "testy_dir")
     database_dir = config.get("application", "database_dir")
+    failure_dir = config.get("application", "failure_dir")
     service_script_dir = config.get("application", "service_script_dir")
 
-    for dir in [testy_dir, database_dir, service_script_dir]:
+    for dir in [testy_dir, database_dir, failure_dir, service_script_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
     c.sudo(f"chown -R {user}:{user} {database_dir}")
@@ -159,6 +160,7 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
+    create_working_copy(c, config.get("testy", "failure_dir"), testy_dir, user)
     create_working_copy(c, config.get("testy", "service_script_dir"), testy_dir, user)
 
     # Build WiredTiger.

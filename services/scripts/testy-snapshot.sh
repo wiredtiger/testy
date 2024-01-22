@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 main() {
     local _device_name=/dev/xvdf
