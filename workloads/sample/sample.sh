@@ -20,10 +20,10 @@ run() {
 validate() {
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
     echo "Running verify..."
-    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify 2>&1 | sudo tee ${failure_dir}${failure_file}
+    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify 2>&1 | sudo tee ${failure_dir}/${failure_file}
     echo "Validating mirrors..."
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir" 2>&1 | sudo tee ${failure_dir}${failure_file}
-    sudo rm -f ${failure_dir}${failure_file}
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir" 2>&1 | sudo tee ${failure_dir}/${failure_file}
+    sudo rm -f ${failure_dir}/${failure_file}
 }
 
 "$@"

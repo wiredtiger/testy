@@ -489,7 +489,7 @@ validate_database() {
                         --tags Key=Validation,Value=failed
     
     # Rename failure files to their associated snapshot id.
-    sudo mv -v "${failure_dir}${failure_file}" "${failure_dir}/${_snapshot_id}.txt"
+    sudo mv -v "${failure_dir}/${failure_file}" "${failure_dir}/${_snapshot_id}.txt"
     echo "Validation failed for ${_snapshot_id}, logs saved to ${failure_dir}/${_snapshot_id}.txt" 
     return 1
 }
