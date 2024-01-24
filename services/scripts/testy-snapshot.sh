@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 main() {
     local _device_name=/dev/xvdf
@@ -486,6 +485,10 @@ validate_database() {
         
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
                         --tags Key=Validation,Value=failed
+    
+    # Rename failure files to their associated snapshot id.
+    sudo mv ${failure_dir}${failure_file} ${failure_dir}/${_snapshot_id}.txt
+    echo "Validation failed for ${_snapshot_id}, logs saved to ${failure_dir}/${_snapshot_id}.txt" 
     return 1
 }
 
