@@ -89,7 +89,7 @@ def validate_snapshot(c, snapshot_id, instance_name=None):
             validate(conn)
     except Exception as e:
         print(f"The EC2 instance was launched successfully but the validation failed: {e}")
-    
+
 # Rename an AWS snapshot.
 @task
 def snapshot_rename(c, snapshot_id, name):
@@ -391,7 +391,7 @@ def validate(c):
     result = c.sudo(command, user=user, warn=True)
     if not result:
         raise Exit(f"Validate failed for '{workload}' workload.")
-    
+
 # The workload function takes three optional arguments: upload, upload_config and describe. 
 # If no arguments are provided, the current workload is returned.
 @task

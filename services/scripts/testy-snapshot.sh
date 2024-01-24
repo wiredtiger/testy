@@ -3,7 +3,7 @@
 main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
-    local _validation_script=${1}
+    local _validation_script=${_mount_point}${1}
     local _failure_dir=${3}
     local _failure_file=${4}
 
