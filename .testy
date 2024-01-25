@@ -14,6 +14,7 @@ home_dir           = ${application:testy_dir}/framework
 script_dir         = ${home_dir}/scripts
 service_dir        = ${home_dir}/services
 workload_dir       = ${home_dir}/workloads
+failure_dir        = ${home_dir}/failures
 service_script_dir = ${home_dir}/services/scripts
 parse_script       = ${script_dir}/testy_parse.py
 unpack_script      = ${script_dir}/testy_unpack.py
