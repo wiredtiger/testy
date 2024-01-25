@@ -161,7 +161,6 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     create_working_copy(c, config.get("testy", "home_dir") + f"/{testy_config}",
               testy_dir, user)
     create_working_copy(c, config.get("testy", "workload_dir"), testy_dir, user)
-    create_working_copy(c, config.get("testy", "failure_dir"), testy_dir, user)
     create_working_copy(c, config.get("testy", "service_script_dir"), testy_dir, user)
 
     # Build WiredTiger.
