@@ -80,6 +80,7 @@ def launch_snapshot(c, snapshot_id, instance_name=None):
 @task
 def validate_snapshot(c, snapshot_id, instance_name=None):
     success, user, hostname = launch_snapshot(c, snapshot_id, instance_name)
+
     if not success:
         return
     try:
@@ -137,9 +138,10 @@ def install(c, wiredtiger_branch="develop", testy_branch="main"):
     # Create framework directories.
     testy_dir = config.get("application", "testy_dir")
     database_dir = config.get("application", "database_dir")
+    failure_dir = config.get("application", "failure_dir")
     service_script_dir = config.get("application", "service_script_dir")
 
-    for dir in [testy_dir, database_dir, service_script_dir]:
+    for dir in [testy_dir, database_dir, failure_dir, service_script_dir]:
         create_directory(c, dir)
     c.sudo(f"chown -R $(whoami):$(whoami) {testy_dir}")
     c.sudo(f"chown -R {user}:{user} {database_dir}")
@@ -384,6 +386,7 @@ def validate(c):
     user = get_value(c, "application", "user")
     wif = get_value(c, "application", "workload_dir") + f"/{workload}/{workload}.sh"
     command = get_env(c, "environment") + " bash " + wif + " validate"
+
     result = c.sudo(command, user=user, warn=True)
     if not result:
         raise Exit(f"Validate failed for '{workload}' workload.")
