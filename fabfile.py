@@ -607,7 +607,7 @@ def info(c):
         c.run(f"systemctl status {testy_service}")
 
 @task
-def snapshot_failures(c, list=False):
+def snapshot_failures(c, list=False, get=None):
     if type(c) is not Connection:
         print("Please specify the testy server with the -H option to use this command.")
         return
@@ -623,7 +623,18 @@ def snapshot_failures(c, list=False):
             print(result.stdout)
         else:
             print(result.stderr)
-        
+    
+    if get:
+        snapshot_file =  f"{failures_dir}/{get}"
+        if not dest:
+            dest = "./"
+        try:
+            result = c.get(snapshot_file, dest)
+            print(f"File: {snapshot_file} successfully downloaded to {dest}")
+        except Exception as e:
+            print(e)
+            print(f"Unable to download file: {snapshot_file}, please check the file exists.")
+
 
 # ---------------------------------------------------------------------------------------
 # Helper functions
