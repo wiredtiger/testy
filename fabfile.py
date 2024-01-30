@@ -608,7 +608,7 @@ def info(c):
 
 # Access the saved verify snapshot failure files from the remote testy server. This function takes
 # 5 optional arguments, allowing you to list the files, download a specified file to a specified
-# destination, print a specified file's contents and delete the specified file. 
+# destination, print a specified file's contents and delete a specified file. 
 @task
 def snapshot_failures(c, list=False, get=None, dest=None, show=None, delete=None):
     if type(c) is not Connection:
@@ -632,7 +632,7 @@ def snapshot_failures(c, list=False, get=None, dest=None, show=None, delete=None
         if not dest:
             dest = "./"
         try:
-            # dest holds the local path to where the file will be downloaded to. 
+            # dest holds the local path where the file will be downloaded to. 
             result = c.get(snapshot_file, dest)
             print(f"File: {snapshot_file} successfully downloaded to {dest}")
         except Exception as e:
@@ -646,7 +646,7 @@ def snapshot_failures(c, list=False, get=None, dest=None, show=None, delete=None
 
     if delete:
         snapshot_file =  f"{failures_dir}/{delete}"
-        # Failures are printed automatically
+        # Failures are printed automatically.
         if c.sudo(f"rm {snapshot_file}", user="root"):
             print(f"{snapshot_file} successfully deleted.")
 
