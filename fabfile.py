@@ -606,6 +606,50 @@ def info(c):
     if testy_status:
         c.run(f"systemctl status {testy_service}")
 
+# Access the saved verify snapshot failure files from the remote testy server. This function takes
+# 5 optional arguments, allowing you to list the files, download a specified file to a specified
+# destination, print a specified file's contents and delete a specified file. 
+@task
+def snapshot_failures(c, list=False, get=None, dest=None, show=None, delete=None):
+    if type(c) is not Connection:
+        print("Please specify the testy server with the -H option to use this command.")
+        return
+
+    failures_dir =  get_value(c, "application", "failure_dir")
+    user = get_value(c, "application", "user")
+   
+    if list:
+        command = f"ls {failures_dir}"
+        result = c.sudo(command, user=user, warn=True, hide=True)
+        if result.ok:
+            print("\n\033[1mSnapshot verification failures: \033[0m")
+            print(result.stdout)
+        else:
+            print(result.stderr)
+    
+    if get:
+        snapshot_file =  f"{failures_dir}/{get}"
+        if not dest:
+            dest = "./"
+        try:
+            # dest holds the local path where the file will be downloaded to. 
+            result = c.get(snapshot_file, dest)
+            print(f"File: {snapshot_file} successfully downloaded to {dest}")
+        except Exception as e:
+            print(e)
+            print(f"Unable to download file: {snapshot_file}, please check the file exists.")
+
+    if show:
+        snapshot_file =  f"{failures_dir}/{show}"
+        # Failures are printed automatically; output will show if the command succeeds.
+        c.sudo(f"cat {snapshot_file}", user=user)
+
+    if delete:
+        snapshot_file =  f"{failures_dir}/{delete}"
+        # Failures are printed automatically.
+        if c.sudo(f"rm {snapshot_file}", user="root"):
+            print(f"{snapshot_file} successfully deleted.")
+
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
