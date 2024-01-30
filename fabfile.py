@@ -606,6 +606,25 @@ def info(c):
     if testy_status:
         c.run(f"systemctl status {testy_service}")
 
+@task
+def snapshot_failures(c, list=False):
+    if type(c) is not Connection:
+        print("Please specify the testy server with the -H option to use this command.")
+        return
+
+    failures_dir =  get_value(c, "application", "failure_dir")
+    user = get_value(c, "application", "user")
+   
+    if list:
+        command = f"ls {failures_dir}"
+        result = c.sudo(command, user=user, warn=True, hide=True)
+        if result.ok:
+            print("\n\033[1mSnapshot verification failures: \033[0m")
+            print(result.stdout)
+        else:
+            print(result.stderr)
+        
+
 # ---------------------------------------------------------------------------------------
 # Helper functions
 # ---------------------------------------------------------------------------------------
