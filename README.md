@@ -48,10 +48,10 @@ fab -H user@host start <workload>
 If a workload is already running, the start function does not work. Either call `restart` or `stop`.
 
 ### `fab restart`
-The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload is used for the new run. The restart function also runs `validate()` as implemented by the user's workload interface file. If this is not successful, an error message is returned and restart is aborted.
+The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload is used for the new run. The restart function can also run `validate()` as implemented by the user's workload interface file, this optional argument must be passed in for validate to run. If this is not successful, an error message is returned and restart is aborted.
 
 ```
-fab -H user@host restart [workload]
+fab -H user@host restart [workload] [--validate-workload] 
 ```
 
 ### `fab stop`
@@ -104,19 +104,19 @@ The list function has four options: distros, instances, snapshot and workloads. 
 - The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
 
   ```
-  fab list --distros
+  fab  -H user@host list --distros
   ```
 
-- The `list -instances` command lists the available instances we have already launched.
+- The `list --instances` command lists the available instances we have already launched.
 
   ```
-  fab list --instances
+  fab -H user@host list --instances
   ```
 
 - The `list --snapshots` command lists the available snapshots that can be used through the `fab launch-snapshot` command.
 
   ```
-  fab list --snapshots
+  fab -H user@host list --snapshots
   ```
   
 - The `fab list --workloads` command lists the available workloads on the testy server, highlighting the current workload.
@@ -138,6 +138,32 @@ The `snapshot-delete` function will take a specified snapshot ID or a list of sn
 fab -H user@host snapshot-delete=<snapshot_id,snapshot_id1> 
 ```
 
+
+### `fab snapshot-failures`
+The snapshot-failures function has 5 optional parameters: list, get, dest, show and delete. Any number of options can be given at one time, however it is best to use them one at a time to avoid any mistakes in dealing with the files.
+
+- The `snapshot-failures --list` command lists the snapshot verify failure files on the remote machine and can be downloaded through the  `--get` option.
+
+  ```
+  fab -H user@host snapshot-failures --list
+  ```
+
+- The `snapshot-failures --get [--dest]` the get command downloads the specified failure file from the remote machine locally. You can optionally specify a destination through `--dest` to download the file to and optionally rename the file, otherwise it will default to the current working directory with the original file name. 
+
+  ```
+  fab -H user@host snapshot-failures --get=<snapshot.txt> [--dest=/local/path/{optional-filename.txt}]
+  ```
+
+- The `snapshot-failures --show ` command prints the specified failure file in the terminal. 
+
+  ```
+  fab -H user@host snapshot-failures --show=<snapshot.txt> 
+  ```
+  
+- The `snapshot-failures --delete` command will delete the specified failure file from the remote machine.
+  ```
+  fab -H user@host snapshot-failures --delete=<snapshot.txt>
+  ```
 
 ## Adding functions to fabfile.py
 
