@@ -74,7 +74,7 @@ The workload function has three options: upload, upload config and describe. If 
 ```
 fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_workload_name]
   
-# This will return the current workload.
+# This returns the current workload.
 fab -H user@host workload
 ```
 
@@ -84,7 +84,7 @@ fab -H user@host workload
   fab -H user@host workload --upload=<my-workload.zip>
   ```
 
-- The `workload --upload-config` requires one argument, a test format config file. The function uploads a config file from your local machine to the remote testy server. This will place the config file directly into the test format workload directory ready to run test format. 
+- The `workload --upload-config` requires one argument, a test format config file. The function uploads a config file from your local machine to the remote testy server. This places the config file directly into the test format workload directory ready to run test format. 
   ```
   fab -H user@host workload --upload-config=<CONFIG.sample>
   ```
@@ -94,7 +94,7 @@ fab -H user@host workload
   ```
   fab -H user@host workload --describe=[workload]
 
-  # This will describe the current workload.
+  # This describes the current workload.
   fab -H user@host workload --describe
   ```
 
@@ -133,7 +133,7 @@ fab -H user@host info
 ```
 
 ### `fab snapshot-delete`
-The `snapshot-delete` function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
+The `snapshot-delete` function takes a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
 ```
 fab -H user@host snapshot-delete=<snapshot_id,snapshot_id1> 
 ```
@@ -148,10 +148,10 @@ The snapshot-failures function has 5 optional parameters: list, get, dest, show 
   fab -H user@host snapshot-failures --list
   ```
 
-- The `snapshot-failures --get [--dest]` the get command downloads the specified failure file from the remote machine locally. You can optionally specify a destination through `--dest` to download the file to and optionally rename the file, otherwise it will default to the current working directory with the original file name. 
+- The `snapshot-failures --get [--dest]` command downloads the specified failure file from the remote machine locally. You can optionally specify a destination through `--dest` to download the file to a specific location and optionally rename the file. By default it downloads to the current working directory with the original file name. 
 
   ```
-  fab -H user@host snapshot-failures --get=<snapshot.txt> [--dest=/local/path/{optional-filename.txt}]
+  fab -H user@host snapshot-failures --get=<snapshot.txt> [--dest=/path/to/file]
   ```
 
 - The `snapshot-failures --show ` command prints the specified failure file in the terminal. 
@@ -160,7 +160,7 @@ The snapshot-failures function has 5 optional parameters: list, get, dest, show 
   fab -H user@host snapshot-failures --show=<snapshot.txt> 
   ```
   
-- The `snapshot-failures --delete` command will delete the specified failure file from the remote machine.
+- The `snapshot-failures --delete` command deletes the specified failure file from the remote machine.
   ```
   fab -H user@host snapshot-failures --delete=<snapshot.txt>
   ```
