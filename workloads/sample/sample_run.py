@@ -75,7 +75,7 @@ txn_op = txn(2*insert_op_1 + 2*update_op_1 + 2*delete_op + 2*read_op)
 txn_thread = Thread(txn_op)
 
 # Define the workload using the above operations.
-workload = Workload(context, 10*insert_thread + 10*update_thread + 10*read_thread + \
+workload = Workload(context, 6*insert_thread + 6*update_thread + 6*read_thread + \
            5*delete_thread + txn_thread)
 
 # Disable generation of stats.
@@ -85,7 +85,7 @@ workload.options.report_enabled = False
 workload.options.create_prefix = "table_"
 
 # Target database size in GB.
-db_size_target_gb = 50
+db_size_target_gb = 40
 
 # Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
