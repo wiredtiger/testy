@@ -100,23 +100,24 @@ fab -H user@host workload
 
 ### `fab list`
 The list function has four options: distros, instances, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message is printed and the other options continue to execute.
+Note that the operations interacting with AWS directly and not the remote machine do not require a '-H <user@host>' argument. 
 
 - The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
 
   ```
-  fab  -H user@host list --distros
+  fab  -H list --distros
   ```
 
 - The `list --instances` command lists the available instances we have already launched.
 
   ```
-  fab -H user@host list --instances
+  fab -H list --instances
   ```
 
 - The `list --snapshots` command lists the available snapshots that can be used through the `fab launch-snapshot` command.
 
   ```
-  fab -H user@host list --snapshots
+  fab list --snapshots
   ```
   
 - The `fab list --workloads` command lists the available workloads on the testy server, highlighting the current workload.
@@ -135,7 +136,7 @@ fab -H user@host info
 ### `fab snapshot-delete`
 The `snapshot-delete` function takes a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
 ```
-fab -H user@host snapshot-delete=<snapshot_id,snapshot_id1> 
+fab snapshot-delete=<snapshot_id,snapshot_id1> 
 ```
 
 
