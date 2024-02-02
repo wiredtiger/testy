@@ -105,13 +105,13 @@ Note that the operations interacting with AWS directly and not the remote machin
 - The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
 
   ```
-  fab  -H list --distros
+  fab  list --distros
   ```
 
 - The `list --instances` command lists the available instances we have already launched.
 
   ```
-  fab -H list --instances
+  fab list --instances
   ```
 
 - The `list --snapshots` command lists the available snapshots that can be used through the `fab launch-snapshot` command.
