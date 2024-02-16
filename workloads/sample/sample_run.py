@@ -38,7 +38,7 @@ def get_total_os_memory():
 context = Context()
 # The allocated cache size follows what MongoDB does: (total memory available - 1GB) / 2.
 cache_size_gb = int(((get_total_os_memory() - 1e9) / 2) / 1e9)
-connection_config = f"cache_size={cache_size_gb}GB,checkpoint=(wait=60),create=true,log=(enabled=true),statistics=(fast),statistics_log=(wait=60,json)"
+connection_config = f"cache_size={cache_size_gb}GB,checkpoint=(wait=60),create=true,log=(enabled=true),statistics=(fast),statistics_log=(wait=60,json),transaction_sync=(enabled,method=fsync)"
 connection = context.wiredtiger_open(connection_config)
 
 # Make smaller inserts more frequently and large ones less frequently.
