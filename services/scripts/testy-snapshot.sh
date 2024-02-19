@@ -4,8 +4,8 @@ main() {
     local _device_name=/dev/xvdf
     local _mount_point=/mnt/backup
     local _validation_script=${_mount_point}${1}
-    local _failure_dir=$3
-    local _failure_file=$4
+    local _failure_dir=${3}
+    local _failure_file=${4}
 
     local _aws_endpoint
     local _instance_id
@@ -104,7 +104,7 @@ main() {
 
     echo "Running validation script '$_validation_script' on volume '$_volume_id'."
     ts=$(date +%s%3N)
-    if validate_database "$_validation_script" "$_mount_point" "$_snapshot_id" "$_volume_id" "$_failure_dir" "$_failure_file"; then
+    if validate_database "$_validation_script" "$_mount_point" "$_snapshot_id" "$_volume_id"; then
         echo "Successfully validated database backup snapshot '$_snapshot_id'."
         aws logs put-log-events --log-group-name testy-logs \
                                 --log-stream-name testy-logs --log-events \
@@ -475,8 +475,6 @@ validate_database() {
     local _mount_point=$2
     local _snapshot_id=$3
     local _volume_id=$4
-    local _failure_dir=$5
-    local _failure_file=$6
 
     aws ec2 create-tags --resources "$_snapshot_id" "$_volume_id" \
                         --tags Key=Validation,Value=incomplete
