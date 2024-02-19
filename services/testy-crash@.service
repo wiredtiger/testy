@@ -13,7 +13,7 @@ ExecStartPre=/bin/bash -c 'systemctl is-active --quiet testy-run@%I.service'
 
 ExecStart=/bin/bash -c \
   'pkill -P $(systemctl show --property MainPID testy-run@%I.service | awk -F \'=\' \'{print $2}\') --signal SIGKILL'
-ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-crash'
+ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-crash $failure_dir $failure_file'
 
 # Make sure the timer is enabled before restarting the testy workload so the crash service does not
 # restart testy if it has been stopped in the meantime.
