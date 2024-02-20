@@ -46,9 +46,7 @@ insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(
               Operation(Operation.OP_SLEEP, "10")
 insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1000*1024)) + \
               Operation(Operation.OP_SLEEP, "30")
-insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
-              Operation(Operation.OP_SLEEP, "60")
-insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
+insert_thread = Thread(10*insert_op_1 + 5*insert_op_2)
 
 # Perform updates at random using the pareto distribution. Make smaller updates more frequently
 # and large ones less frequently.
@@ -56,9 +54,7 @@ update_op_1 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoO
             Value(1024)) + Operation(Operation.OP_SLEEP, "10")
 update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
             Value(1000*1024)) + Operation(Operation.OP_SLEEP, "30")
-update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
-            Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
-update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
+update_thread = Thread(10*update_op_1 + 5*update_op_2)
 
 # Read operations.
 read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
