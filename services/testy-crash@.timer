@@ -4,7 +4,7 @@ After=testy-run@%i.service
 
 [Timer]
 OnActiveSec=43260s
-OnUnitActiveSec=86400s
+OnUnitActiveSec=259200s
 
 [Install]
 WantedBy=timers.target
