@@ -93,6 +93,9 @@ workload.options.create_count = 1
 workload.options.create_trigger = db_size_target_gb * 1024
 workload.options.create_target = db_size_target_gb * 1024
 
+# Limit the number of files that can exist in the database.
+workload.options.max_num_files = 1000
+
 # Drop five tables every 90 seconds when the database size exceeds the target database size margin.
 # Stop when the database size is below the target size margin.
 workload.options.drop_interval = 90
