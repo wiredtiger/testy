@@ -48,10 +48,10 @@ fab -H user@host start <workload>
 If a workload is already running, the start function does not work. Either call `restart` or `stop`.
 
 ### `fab restart`
-The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload is used for the new run. The restart function also runs `validate()` as implemented by the user's workload interface file. If this is not successful, an error message is returned and restart is aborted.
+The `restart` function takes an optional workload argument to restart the framework on. If no argument is given, the current workload is used for the new run. The restart function can also run `validate()` as implemented by the user's workload interface file, this optional argument must be passed in for validate to run. If this is not successful, an error message is returned and restart is aborted.
 
 ```
-fab -H user@host restart [workload]
+fab -H user@host restart [workload] [--validate-workload] 
 ```
 
 ### `fab stop`
@@ -74,7 +74,7 @@ The workload function has three options: upload, upload config and describe. If 
 ```
 fab -H user@host workload [--upload=new_workload_name.zip] [--describe=existing_workload_name]
   
-# This will return the current workload.
+# This returns the current workload.
 fab -H user@host workload
 ```
 
@@ -84,7 +84,7 @@ fab -H user@host workload
   fab -H user@host workload --upload=<my-workload.zip>
   ```
 
-- The `workload --upload-config` requires one argument, a test format config file. The function uploads a config file from your local machine to the remote testy server. This will place the config file directly into the test format workload directory ready to run test format. 
+- The `workload --upload-config` requires one argument, a test format config file. The function uploads a config file from your local machine to the remote testy server. This places the config file directly into the test format workload directory ready to run test format. 
   ```
   fab -H user@host workload --upload-config=<CONFIG.sample>
   ```
@@ -94,12 +94,13 @@ fab -H user@host workload
   ```
   fab -H user@host workload --describe=[workload]
 
-  # This will describe the current workload.
+  # This describes the current workload.
   fab -H user@host workload --describe
   ```
 
 ### `fab list`
 The list function has four options: distros, instances, snapshot and workloads. Up to three options can be given at a time in any order. If one option fails, an error message is printed and the other options continue to execute.
+Note that the operations interacting with AWS directly and not the remote machine do not require a '-H <user@host>' argument. 
 
 - The `list --distros` command lists the available distros where a testy server can be installed through the `fab launch` command.
 
@@ -107,7 +108,7 @@ The list function has four options: distros, instances, snapshot and workloads. 
   fab list --distros
   ```
 
-- The `list -instances` command lists the available instances we have already launched.
+- The `list --instances` command lists the available instances we have already launched.
 
   ```
   fab list --instances
@@ -133,11 +134,37 @@ fab -H user@host info
 ```
 
 ### `fab snapshot-delete`
-The `snapshot-delete` function will take a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
+The `snapshot-delete` function takes a specified snapshot ID or a list of snapshot IDs separated by a comma with no spaces, and delete the corresponding snapshots.
 ```
-fab -H user@host snapshot-delete=<snapshot_id,snapshot_id1> 
+fab snapshot-delete=<snapshot_id,snapshot_id1> 
 ```
 
+
+### `fab snapshot-failures`
+The snapshot-failures function has 5 optional parameters: list, get, dest, show and delete. Any number of options can be given at one time, however it is best to use them one at a time to avoid any mistakes in dealing with the files.
+
+- The `snapshot-failures --list` command lists the snapshot verify failure files on the remote machine and can be downloaded through the  `--get` option.
+
+  ```
+  fab -H user@host snapshot-failures --list
+  ```
+
+- The `snapshot-failures --get [--dest]` command downloads the specified failure file from the remote machine locally. You can optionally specify a destination through `--dest` to download the file to a specific location and optionally rename the file. By default it downloads to the current working directory with the original file name. 
+
+  ```
+  fab -H user@host snapshot-failures --get=<snapshot.txt> [--dest=/path/to/file]
+  ```
+
+- The `snapshot-failures --show ` command prints the specified failure file in the terminal. 
+
+  ```
+  fab -H user@host snapshot-failures --show=<snapshot.txt> 
+  ```
+  
+- The `snapshot-failures --delete` command deletes the specified failure file from the remote machine.
+  ```
+  fab -H user@host snapshot-failures --delete=<snapshot.txt>
+  ```
 
 ## Adding functions to fabfile.py
 
