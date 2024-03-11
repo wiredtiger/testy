@@ -20,18 +20,18 @@ run() {
 validate() {
     set -o pipefail
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
-    failure_file_path=${failure_dir}/${failure_file}
+    validation_logs=${failure_dir}/${failure_file}
     database_path=$1/$database_dir
     echo "Database path: $database_path"
-    echo "Logs saved to: $failure_file_path"
+    echo "Logs saved to: $validation_logs"
     echo "Running verify..."
-    free -h | sudo tee $failure_file_path
-    sudo df -h | sudo tee -a $failure_file_path
-    sudo du -h "$database_path" | sudo tee -a $failure_file_path
-    ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $failure_file_path
+    free -h | sudo tee $validation_logs
+    sudo df -h | sudo tee -a $validation_logs
+    sudo du -h "$database_path" | sudo tee -a $validation_logs
+    ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $validation_logs
     echo "Validating mirrors..."
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $failure_file_path
-    sudo rm -f $failure_file_path
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $validation_logs
+    sudo rm -f $validation_logs
 }
 
 "$@"
