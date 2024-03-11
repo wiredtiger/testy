@@ -26,8 +26,8 @@ validate() {
     echo "Logs saved to: $validation_logs"
     echo "Running verify..."
     free -h | sudo tee $validation_logs
-    sudo df -h | sudo tee -a $validation_logs
-    sudo du -h "$database_path" | sudo tee -a $validation_logs
+    df -h | sudo tee -a $validation_logs
+    du -h "$database_path" | sudo tee -a $validation_logs
     ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $validation_logs
     echo "Validating mirrors..."
     python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $validation_logs
