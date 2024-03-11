@@ -25,9 +25,9 @@ validate() {
     echo "Database path: $database_path"
     echo "Logs saved to: $failure_file_path"
     echo "Running verify..."
-    sudo free -h > $failure_file_path
-    sudo df -h >> $failure_file_path
-    sudo du -h "$database_path" >> $failure_file_path
+    free -h | sudo tee $failure_file_path
+    sudo df -h | sudo tee -a $failure_file_path
+    sudo du -h "$database_path" | sudo tee -a $failure_file_path
     ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $failure_file_path
     echo "Validating mirrors..."
     python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $failure_file_path
