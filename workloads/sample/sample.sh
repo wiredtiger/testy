@@ -23,7 +23,7 @@ validate() {
     failure_file_path=${failure_dir}/${failure_file}
     database_path=$1/$database_dir
     echo "Database path: $database_path"
-    echo "Database path: $failure_file_path"
+    echo "Logs saved to: $failure_file_path"
     echo "Running verify..."
     free -h > $failure_file_path
     df -h >> $failure_file_path
