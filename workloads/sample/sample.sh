@@ -20,14 +20,18 @@ run() {
 validate() {
     set -o pipefail
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
+    failure_file_path=${failure_dir}/${failure_file}
+    database_path=$1/$database_dir
+    echo "Database path: $database_path"
+    echo "Database path: $failure_file_path"
     echo "Running verify..."
-    free -h > ${failure_dir}/${failure_file}
-    df -h >> ${failure_dir}/${failure_file}
-    du -h "$1/$database_dir" >> ${failure_dir}/${failure_file}
-    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify 2>&1 | sudo tee -a ${failure_dir}/${failure_file}
+    free -h > $failure_file_path
+    df -h >> $failure_file_path
+    du -h "$database_path" >> $failure_file_path
+    ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $failure_file_path
     echo "Validating mirrors..."
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir" 2>&1 | sudo tee -a ${failure_dir}/${failure_file}
-    sudo rm -f ${failure_dir}/${failure_file}
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $failure_file_path
+    sudo rm -f $failure_file_path
 }
 
 "$@"
