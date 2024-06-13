@@ -106,7 +106,7 @@ workload.options.mirror_tables = True
 workload.options.random_table_values = True
 
 # Enable background compaction with a compaction threshold of 100MB.
-#workload.options.background_compact = 100
+workload.options.background_compact = 100
 
 # Set the workload runtime to maximum value (~68 years).
 workload.options.run_time = 2147483647
