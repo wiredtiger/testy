@@ -42,32 +42,32 @@ connection_config = f"cache_size={cache_size_gb}GB,checkpoint=(wait=60),create=t
 connection = context.wiredtiger_open(connection_config)
 
 # Make smaller inserts more frequently and large ones less frequently.
-insert_op_1 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024)) + \
-              Operation(Operation.OP_SLEEP, "10")
-insert_op_2 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1000*1024)) + \
-              Operation(Operation.OP_SLEEP, "30")
-insert_op_3 = Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100000*1024)) + \
-              Operation(Operation.OP_SLEEP, "60")
+insert_op_1 = 100 * (Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(1024))) + \
+              Operation(Operation.OP_SLEEP, "1")
+insert_op_2 = 50 * (Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(10*1024))) + \
+              Operation(Operation.OP_SLEEP, "2")
+insert_op_3 = 20 * (Operation(Operation.OP_INSERT, Key(Key.KEYGEN_APPEND, 512), Value(100*1024))) + \
+              Operation(Operation.OP_SLEEP, "5")
 insert_thread = Thread(10*insert_op_1 + 5*insert_op_2 + insert_op_3)
 
 # Perform updates at random using the pareto distribution. Make smaller updates more frequently
 # and large ones less frequently.
-update_op_1 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
-            Value(1024)) + Operation(Operation.OP_SLEEP, "10")
-update_op_2 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
-            Value(1000*1024)) + Operation(Operation.OP_SLEEP, "30")
-update_op_3 = Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
-            Value(100000*1024)) + Operation(Operation.OP_SLEEP, "60")
+update_op_1 = 100 * (Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(1024))) + Operation(Operation.OP_SLEEP, "1")
+update_op_2 = 50 * (Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(10*1024))) + Operation(Operation.OP_SLEEP, "2")
+update_op_3 = 20 * (Operation(Operation.OP_UPDATE, Key(Key.KEYGEN_PARETO, 512, ParetoOptions(1)),
+            Value(100*1024))) + Operation(Operation.OP_SLEEP, "5")
 update_thread = Thread(10*update_op_1 + 5*update_op_2 + update_op_3)
 
 # Read operations.
-read_op = Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1)) * 10 + \
-          Operation(Operation.OP_SLEEP, "10")
+read_op = 20 * (Operation(Operation.OP_SEARCH, Key(Key.KEYGEN_APPEND, 512), Value(1))) * 10 + \
+          Operation(Operation.OP_SLEEP, "5")
 read_thread = Thread(read_op)
 
 # Delete operations.
-delete_op = Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1)) + \
-            Operation(Operation.OP_SLEEP, "10")
+delete_op = 20 * (Operation(Operation.OP_REMOVE, Key(Key.KEYGEN_APPEND, 512), Value(1))) + \
+            Operation(Operation.OP_SLEEP, "5")
 delete_thread = Thread(delete_op)
 
 # Transactions.
@@ -85,13 +85,14 @@ workload.options.report_enabled = False
 workload.options.create_prefix = "table_"
 
 # Target database size in GB.
-db_size_target_gb = 50
+db_size_target_gb = 40
 
 # Create one table every 30 seconds until we have reached the target database size.
 workload.options.create_interval = 30
 workload.options.create_count = 1
 workload.options.create_trigger = db_size_target_gb * 1024
 workload.options.create_target = db_size_target_gb * 1024
+workload.options.max_num_files = 1000
 
 # Limit the number of files that can exist in the database.
 workload.options.max_num_files = 1000

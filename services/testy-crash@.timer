@@ -3,8 +3,8 @@ Description="testy-crash.timer: A crash scheduler for the testy framework"
 After=testy-run@%i.service
 
 [Timer]
-OnActiveSec=43260s
-OnUnitActiveSec=259200s
+OnActiveSec=604800s
+OnUnitActiveSec=604800s
 
 [Install]
 WantedBy=timers.target
