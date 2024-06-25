@@ -9,7 +9,7 @@ Group=testy
 ExecStartPre=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status 1'
 ExecStartPre=/bin/bash -c \
   'test $(systemctl show --property MainPID testy-crash@%I.service | awk -F \'=\' \'{print $2}\') -eq 0'
-ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup $failure_directory $failure_file'
+ExecStart=/bin/bash -c '${script_dir}/testy-snapshot.sh ${workload_dir}/%I/%I.sh testy-backup $failure_dir $failure_file'
 ExecStopPost=/bin/bash -c '${script_dir}/testy-metrics.sh backup_status 0'
 
 TimeoutSec=36000s

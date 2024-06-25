@@ -20,11 +20,18 @@ run() {
 validate() {
     set -o pipefail
     export PYTHONPATH=${wt_build_dir}/lang/python:${wt_home_dir}/tools:$PYTHONPATH
+    validation_logs=${failure_dir}/${failure_file}
+    database_path=$1/$database_dir
+    echo "Database path: $database_path"
+    echo "Logs saved to: $validation_logs"
     echo "Running verify..."
-    ${wt_build_dir}/wt -h "$1/$database_dir" -R verify 2>&1 | sudo tee ${failure_dir}/${failure_file}
+    free -h | sudo tee $validation_logs
+    df -h | sudo tee -a $validation_logs
+    du -h "$database_path" | sudo tee -a $validation_logs
+    ${wt_build_dir}/wt -h "$database_path" -R verify 2>&1 | sudo tee -a $validation_logs
     echo "Validating mirrors..."
-    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$1/$database_dir" 2>&1 | sudo tee ${failure_dir}/${failure_file}
-    sudo rm -f ${failure_dir}/${failure_file}
+    python3 ${wt_home_dir}/bench/workgen/validate_mirror_tables.py "$database_path" 2>&1 | sudo tee -a $validation_logs
+    sudo rm -f $validation_logs
 }
 
 "$@"
